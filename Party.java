@@ -27,10 +27,8 @@ public class Party extends CaveElement {
     public String toString() {
         String retval = "";
 
-        retval += this.getName() + "\n";
-
         for (Creature creature: creatures) {
-            retval += creature + "\n";
+            retval += creature;
         }
 
         return retval;

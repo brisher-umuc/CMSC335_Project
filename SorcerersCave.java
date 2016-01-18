@@ -13,14 +13,16 @@ import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class SorcerersCave extends JPanel implements ActionListener {
-    private static final Font DEFAULT_FONT = new Font("Comic Sans", Font.BOLD, 16);
+    private static final Font DEFAULT_FONT = new Font("Monospaced", Font.BOLD, 16);
     private static final char PARTY = 'p';
     private static final char CREATURE = 'c';
     private static final char ARTIFACT = 'a';
     private static final char TREASURE = 't';
+    private static final String NEWLINE = "\n";
 
     private JFileChooser fileChooser;
     private JButton openButton, searchButton, displayButton;
@@ -29,12 +31,13 @@ public class SorcerersCave extends JPanel implements ActionListener {
     private static JTextField textField;
     private JComboBox<String> comboBox;
     private static Boolean sentinel = false;
-    private Cave cave = new Cave();
-    private HashMap<Integer, Object> indexLookup = new HashMap<Integer, Object>();
-    private HashMap<String, Object> typeLookup = new HashMap<String, Object>();
-    private HashMap<String, Object> nameLookup = new HashMap<String, Object>();
 
-    public SorcerersCave() {
+    private Cave cave = new Cave();
+    private HashMap<Integer, CaveElement> indexLookup = new HashMap<Integer, CaveElement>();
+    private HashMap<String, ArrayList<CaveElement>> typeLookup = new HashMap<String, ArrayList<CaveElement>>();
+    private HashMap<String, CaveElement> nameLookup = new HashMap<String, CaveElement>();
+
+    public SorcerersCave() {  // constructor
         setLayout(new GridBagLayout());
 
         // settings for most components
@@ -131,6 +134,14 @@ public class SorcerersCave extends JPanel implements ActionListener {
                 JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);  // i wanted to see which file was currently open
                 frame.setTitle("Sorcerer's Cave [" + this.gameFile.toString() + "]");
 
+                if (this.cave.parties.size() > 0 || this.cave.elements.size() > 0) {
+                    // if the cave has been populated before, use a new cave
+                    // essentially, every opening of a file constitutes a new game
+                    this.cave = new Cave();
+                    this.indexLookup = new HashMap<Integer, CaveElement>();
+                    this.typeLookup = new HashMap<String, ArrayList<CaveElement>>();
+                    this.nameLookup = new HashMap<String, CaveElement>();
+                }
                 readInFile();
             }
         } // end open button handler
@@ -138,7 +149,7 @@ public class SorcerersCave extends JPanel implements ActionListener {
             textArea.setText(null);
 
             if (!sentinel) {  // user never entered search criteria
-                this.textArea.append("You can't search for anything with the default value.\n");
+                this.textArea.append("You can't search for anything with the default value." + NEWLINE);
             }
             else {
                 search(this.comboBox.getSelectedItem().toString(), textField.getText());
@@ -146,9 +157,9 @@ public class SorcerersCave extends JPanel implements ActionListener {
         } // end search button handler
         else if (source == this.displayButton) {
             textArea.setText(null);
-            this.textArea.append(this.cave.toString());
+            this.textArea.append(this.cave.toString().replaceAll("\n\n", "\n"));
         } // end display button handler
-        else if (source == textField && sentinel) {
+        else if (source == textField && sentinel) {  // can just hit enter after typing in textField
             search(this.comboBox.getSelectedItem().toString(), textField.getText());
         } // end enter pressed in text field
     } // end actionPerformed
@@ -195,11 +206,23 @@ public class SorcerersCave extends JPanel implements ActionListener {
 
                             this.indexLookup.put(creature.getIndex(), creature);
                             this.nameLookup.put(creature.getName(), creature);
-                            this.typeLookup.put(creature.getType(), creature);
 
-                            Party p = (Party) indexLookup.get(creature.getParty());
-                            System.out.println("Creature: " + creature.getName());
-                            p.creatures.add(creature);
+                            if (this.typeLookup.containsKey(creature.getType())) {
+                                this.typeLookup.get(creature.getType()).add(creature);
+                            }
+                            else {
+                                ArrayList<CaveElement> elementArrayList = new ArrayList<CaveElement>();
+                                elementArrayList.add(creature);
+                                this.typeLookup.put(creature.getType(), elementArrayList);
+                            }
+
+                            if (creature.getParty() == 0) {
+                                this.cave.elements.add(creature);
+                            }
+                            else {
+                                Party p = (Party) indexLookup.get(creature.getParty());
+                                p.creatures.add(creature);
+                            }
 
                             break;
                         case ARTIFACT:  //a:<index>:<type>:<creature>[:<name>]
@@ -211,8 +234,18 @@ public class SorcerersCave extends JPanel implements ActionListener {
 
                             this.indexLookup.put(artifact.getIndex(), artifact);
                             this.nameLookup.put(artifact.getName(), artifact);
-                            this.typeLookup.put(artifact.getType(), artifact);
 
+                            // multiples of the same type
+                            if (this.typeLookup.containsKey(artifact.getType())) {
+                                this.typeLookup.get(artifact.getType()).add(artifact);
+                            }
+                            else {
+                                ArrayList<CaveElement> elementArrayList = new ArrayList<CaveElement>();
+                                elementArrayList.add(artifact);
+                                this.typeLookup.put(artifact.getType(), elementArrayList);
+                            }
+
+                            // orphan artifacts
                             if (artifact.getCreature() == 0) {
                                 this.cave.elements.add(artifact);
                             }
@@ -226,14 +259,21 @@ public class SorcerersCave extends JPanel implements ActionListener {
                             Treasure treasure = new Treasure(parts[2]);
 
                             treasure.setIndex(Integer.valueOf(parts[1]));
-                            treasure.setType(parts[2]);
                             treasure.setCreature(Integer.valueOf(parts[3]));
-                            treasure.setWeight(Integer.valueOf(parts[4]));
+                            treasure.setWeight(Double.valueOf(parts[4]));
                             treasure.setValue(Integer.valueOf(parts[5]));
 
                             this.indexLookup.put(treasure.getIndex(), treasure);
                             this.nameLookup.put(treasure.getName(), treasure);
-                            this.typeLookup.put(treasure.getType(), treasure);
+
+                            if (this.typeLookup.containsKey(treasure.getType())) {
+                                this.typeLookup.get(treasure.getType()).add(treasure);
+                            }
+                            else {
+                                ArrayList<CaveElement> elementArrayList = new ArrayList<CaveElement>();
+                                elementArrayList.add(treasure);
+                                this.typeLookup.put(treasure.getType(), elementArrayList);
+                            }
 
                             if (treasure.getCreature() == 0) {
                                 this.cave.elements.add(treasure);
@@ -273,18 +313,71 @@ public class SorcerersCave extends JPanel implements ActionListener {
         }
 
         if (type.equals("Index") && this.indexLookup.containsKey(index)) {
-            this.textArea.append(this.indexLookup.get(index).toString());
+            this.searchDisplayHelper((CaveElement) this.indexLookup.get(index));
         }
         else if (type.equals("Name") && this.nameLookup.containsKey(value)) {
-            this.textArea.append(this.nameLookup.get(value).toString());
+            this.searchDisplayHelper((CaveElement) this.nameLookup.get(value));
         }
         else if (type.equals("Type") && this.typeLookup.containsKey(value)) {
-            this.textArea.append(this.typeLookup.get(value).toString());
+            this.searchDisplayHelper(this.typeLookup.get(value));
         }
         else {
             this.textArea.append("Search returned no result\n");
         }
     } // end search
+
+    /**
+     * Format search output that is more helpful than just a name
+     */
+    private void searchDisplayHelper(CaveElement element) {
+        this.textArea.append("Index: " + element.getIndex() + NEWLINE);
+        this.textArea.append("Name: " + element.getName() + NEWLINE);
+
+        if (element instanceof Party) {
+            Party party = (Party) element;
+            this.textArea.append("Creatures: \n");
+            for (Creature creature: party.getCreatures()) {
+                this.textArea.append("-> " + creature.getName() + NEWLINE);
+            }
+        }
+        else if (element instanceof Creature) {
+            Creature creature = (Creature) element;
+            Party p = (Party) this.indexLookup.get(creature.getParty());
+            this.textArea.append("Party: " + p.getName() + NEWLINE);
+            this.textArea.append("Type: " + creature.getType() + NEWLINE);
+            this.textArea.append("Artifacts: \n" + creature.getArtifacts().toString() + NEWLINE);
+            this.textArea.append("Treasures: \n" + creature.getTreasures().toString() + NEWLINE);
+            this.textArea.append("Traits: \n");
+            this.textArea.append("-> Fear: " + creature.getFear() + NEWLINE);
+            this.textArea.append("-> Empathy: " + creature.getEmpathy() + NEWLINE);
+            this.textArea.append("-> Capacity: " + creature.getCapacity() + NEWLINE);
+        }
+        else if (element instanceof Artifact) {
+            Artifact artifact = (Artifact) element;
+            this.textArea.append("Owner: " + artifact.getCreature() + NEWLINE);
+            this.textArea.append("Type: " + artifact.getType() + NEWLINE);
+        }
+        else if (element instanceof Treasure) {
+            Treasure treasure = (Treasure) element;
+            this.textArea.append("Owner: " + treasure.getCreature() + NEWLINE);
+            this.textArea.append("Type: " + treasure.getType() + NEWLINE);
+            this.textArea.append("Value: " + treasure.getValue() + NEWLINE);
+            this.textArea.append("Weight: " + treasure.getWeight() + NEWLINE);
+        }
+    } // end display helper for single instance items
+
+    /**
+     * Format search output that is more helpful than just a name
+     */
+    private void searchDisplayHelper(ArrayList<CaveElement> elementArrayList) {
+        // i kept this display relatively simple, since it's returning an unknown number of values
+        // i think the user could use this as a point to start drilling down
+        // i.e. search for type=woman, then use a more specific search for more information
+        for (CaveElement element: elementArrayList) {
+            this.textArea.append("Index: " + element.getIndex() + NEWLINE);
+            this.textArea.append("Name: " + element.getName() + NEWLINE + NEWLINE);
+        }
+    } // end display helper for multiple elements
 
     public static void main(String[] args) {
         JFrame frame = new JFrame("Sorcerer's Cave");

@@ -1,11 +1,11 @@
-import java.util.ArrayList;
-
 /**
  * File: Creature
  * Date: 1/8/16
  * Author: ben risher
  * Purpose:  Creature class to describe creatures in the Sorcerer's Cave game
  */
+import java.util.ArrayList;
+
 public class Creature extends CaveElement {
     //    c:<index>:<type>:<name>:<party>:<empathy>:<fear>:<carrying capacity>
     String type = "";
@@ -19,7 +19,6 @@ public class Creature extends CaveElement {
     public Creature(String _name) {
         this.name = _name;
     }
-
     public ArrayList<Treasure> getTreasures() {
         return treasures;
     }
@@ -66,15 +65,16 @@ public class Creature extends CaveElement {
     public String toString() {
         String retval = "";
 
-        retval += "--> " + this.getName() + "\n";
+        retval += this.getName();
 
-        for (Treasure treasure: treasures) {
-            retval += "----> " + treasure + "\n";
+        if (this.treasures.size() > 0) {
+            retval += "\n-> " + this.treasures;
+        }
+        if (this.artifacts.size() > 0) {
+            retval += "\n-> " + this.artifacts;
         }
 
-        for (Artifact artifact: artifacts) {
-            retval += "----> " + artifact + "\n";
-        }
+        retval += "\n";
 
         return retval;
     }
