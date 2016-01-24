@@ -10,7 +10,7 @@ import java.util.ArrayList;
 
 public class Party extends CaveElement {
     //    p:<index>:<name>
-    ArrayList <Creature> creatures = new ArrayList<Creature>();
+    private ArrayList <Creature> creatures = new ArrayList<Creature>();
 
     public Party(String _name) {
         this.name = _name;

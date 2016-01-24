@@ -134,7 +134,7 @@ public class SorcerersCave extends JPanel implements ActionListener {
                 JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);  // i wanted to see which file was currently open
                 frame.setTitle("Sorcerer's Cave [" + this.gameFile.toString() + "]");
 
-                if (this.cave.parties.size() > 0 || this.cave.elements.size() > 0) {
+                if (this.cave.getParties().size() > 0 || this.cave.getElements().size() > 0) {
                     // if the cave has been populated before, use a new cave
                     // essentially, every opening of a file constitutes a new game
                     this.cave = new Cave();
@@ -189,7 +189,7 @@ public class SorcerersCave extends JPanel implements ActionListener {
 
                             party.setIndex(Integer.valueOf(parts[1]));
 
-                            this.cave.parties.add(party);
+                            this.cave.getParties().add(party);
                             this.indexLookup.put(party.getIndex(), party);
                             this.nameLookup.put(party.getName(), party);
 
@@ -217,11 +217,11 @@ public class SorcerersCave extends JPanel implements ActionListener {
                             }
 
                             if (creature.getParty() == 0) {
-                                this.cave.elements.add(creature);
+                                this.cave.getElements().add(creature);
                             }
                             else {
                                 Party p = (Party) indexLookup.get(creature.getParty());
-                                p.creatures.add(creature);
+                                p.getCreatures().add(creature);
                             }
 
                             break;
@@ -247,11 +247,11 @@ public class SorcerersCave extends JPanel implements ActionListener {
 
                             // orphan artifacts
                             if (artifact.getCreature() == 0) {
-                                this.cave.elements.add(artifact);
+                                this.cave.getElements().add(artifact);
                             }
                             else {
                                 Creature c = (Creature) this.indexLookup.get(artifact.getCreature());
-                                c.artifacts.add(artifact);
+                                c.getArtifacts().add(artifact);
                             }
 
                             break;
@@ -276,11 +276,11 @@ public class SorcerersCave extends JPanel implements ActionListener {
                             }
 
                             if (treasure.getCreature() == 0) {
-                                this.cave.elements.add(treasure);
+                                this.cave.getElements().add(treasure);
                             }
                             else {
                                 Creature cr = (Creature) this.indexLookup.get(treasure.getCreature());
-                                cr.treasures.add(treasure);
+                                cr.getTreasures().add(treasure);
                             }
 
                             break;
@@ -313,10 +313,10 @@ public class SorcerersCave extends JPanel implements ActionListener {
         }
 
         if (type.equals("Index") && this.indexLookup.containsKey(index)) {
-            this.searchDisplayHelper((CaveElement) this.indexLookup.get(index));
+            this.searchDisplayHelper(this.indexLookup.get(index));
         }
         else if (type.equals("Name") && this.nameLookup.containsKey(value)) {
-            this.searchDisplayHelper((CaveElement) this.nameLookup.get(value));
+            this.searchDisplayHelper(this.nameLookup.get(value));
         }
         else if (type.equals("Type") && this.typeLookup.containsKey(value)) {
             this.searchDisplayHelper(this.typeLookup.get(value));
@@ -342,8 +342,10 @@ public class SorcerersCave extends JPanel implements ActionListener {
         }
         else if (element instanceof Creature) {
             Creature creature = (Creature) element;
-            Party p = (Party) this.indexLookup.get(creature.getParty());
-            this.textArea.append("Party: " + p.getName() + NEWLINE);
+            if (creature.getParty() != 0) {
+                Party p = (Party) this.indexLookup.get(creature.getParty());
+                this.textArea.append("Party: " + p.getName() + NEWLINE);
+            }
             this.textArea.append("Type: " + creature.getType() + NEWLINE);
             this.textArea.append("Artifacts: \n" + creature.getArtifacts().toString() + NEWLINE);
             this.textArea.append("Treasures: \n" + creature.getTreasures().toString() + NEWLINE);

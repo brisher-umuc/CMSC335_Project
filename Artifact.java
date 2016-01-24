@@ -6,8 +6,8 @@
  */
 public class Artifact extends CaveElement {
     //    a:<index>:<type>:<creature>[:<name>]
-    int creature = 0;
-    String type = "";
+    private int creature = 0;
+    private String type = "";
 
     public Artifact(String _name) {
         this.name = _name;

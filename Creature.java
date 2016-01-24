@@ -8,13 +8,13 @@ import java.util.ArrayList;
 
 public class Creature extends CaveElement {
     //    c:<index>:<type>:<name>:<party>:<empathy>:<fear>:<carrying capacity>
-    String type = "";
-    int party = 0;
-    int empathy = 0;
-    int fear = 0;
-    int capacity = 0;
-    ArrayList<Treasure> treasures = new ArrayList<Treasure>();
-    ArrayList<Artifact> artifacts = new ArrayList<Artifact>();
+    private String type = "";
+    private int party = 0;
+    private int empathy = 0;
+    private int fear = 0;
+    private int capacity = 0;
+    private ArrayList<Treasure> treasures = new ArrayList<Treasure>();
+    private ArrayList<Artifact> artifacts = new ArrayList<Artifact>();
 
     public Creature(String _name) {
         this.name = _name;
@@ -67,10 +67,17 @@ public class Creature extends CaveElement {
 
         retval += this.getName();
 
-        if (this.treasures.size() > 0) {
+        if (this.getParty() == 0 && this.treasures.size() > 0) {
+            retval += "\n--> " + this.treasures;
+        }
+        else if (this.treasures.size() > 0) {
             retval += "\n-> " + this.treasures;
         }
-        if (this.artifacts.size() > 0) {
+
+        if (this.getParty() == 0 && this.artifacts.size() > 0) {
+            retval += "\n--> " + this.artifacts;
+        }
+        else if (this.artifacts.size() > 0) {
             retval += "\n-> " + this.artifacts;
         }
 

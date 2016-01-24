@@ -6,10 +6,10 @@
  */
 public class Treasure extends CaveElement {
     //    t:<index>:<type>:<creature>:<weight>:<value>
-    String type = "";
-    int creature = 0;
-    double weight = 0;
-    int value = 0;
+    private String type = "";
+    private int creature = 0;
+    private double weight = 0;
+    private int value = 0;
 
     public Treasure(String _type) {
         this.type = _type;
