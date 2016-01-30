@@ -15,6 +15,8 @@ import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -40,10 +42,14 @@ public class SorcerersCave extends JPanel implements ActionListener {
     private static Boolean sentinel = false;
 
     private Cave cave = new Cave();
+    private ArrayList<CaveElement> typeList;
     private HashMap<Integer, CaveElement> indexLookup = new HashMap<Integer, CaveElement>();
     private HashMap<String, ArrayList<CaveElement>> typeLookup = new HashMap<String, ArrayList<CaveElement>>();
     private HashMap<String, CaveElement> nameLookup = new HashMap<String, CaveElement>();
 
+    /**
+     * Constructor for Sorcerer's Cave
+     */
     public SorcerersCave() {  // constructor
         setLayout(new GridBagLayout());
 
@@ -228,11 +234,14 @@ public class SorcerersCave extends JPanel implements ActionListener {
         this.fileChooser.setCurrentDirectory(new File("."));
     }  // end constructor
 
+    /**
+     * Helper for producing some constant gridbagconstraints
+     */
     private GridBagConstraints getBaseGBConstraints() {
         GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.BOTH;
         return c;
-    }
+    }  // end getBaseConstraints
 
     /**
      * event handler
@@ -428,11 +437,9 @@ public class SorcerersCave extends JPanel implements ActionListener {
     }  // end readInFile
 
     /**
-     * search by name, index, or type
+     * recursive search by name, index, or type
      */
-    private void search(String type, String value) {
-        this.textArea.setText(null);
-
+    private void search(String type, String value, Object obj) {
         int index = -1;
         if (type.equals("Index")) {
             try {
@@ -444,24 +451,79 @@ public class SorcerersCave extends JPanel implements ActionListener {
             }
         }
 
-        if (type.equals("Index") && this.indexLookup.containsKey(index)) {
-            this.searchDisplayHelper(this.indexLookup.get(index));
+        if (obj instanceof Cave) {  // initially, the only possible calls are a Cave or an ArrayList
+            this.search(type, value, ((Cave) obj).getParties());
+            this.search(type, value, ((Cave) obj).getElements());
         }
-        else if (type.equals("Name") && this.nameLookup.containsKey(value)) {
-            this.searchDisplayHelper(this.nameLookup.get(value));
+        else if (obj instanceof ArrayList) {
+            for (Object item : ((ArrayList) obj).toArray()) {
+                if (item instanceof Party) {
+                    Party p = (Party) item;
+
+                    if (p.getName().equals(value) && type.equals("Name") || p.getIndex() == index && type.equals("Index")) {
+                        this.searchDisplayHelper(p);
+                        return;
+                    }
+                    this.search(type, value, p.getCreatures());
+                }
+                else if (item instanceof Creature) {
+                    Creature c = (Creature) item;
+
+                    if (c.getName().equals(value) && type.equals("Name") || c.getIndex() == index && type.equals("Index")) {
+                        this.searchDisplayHelper(c);
+                        return;
+                    }
+                    else if (c.getType().equals(value) && type.equals("Type")) {
+                        this.typeList.add(c);
+                    }
+                    this.search(type, value, c.getArtifacts());
+                    this.search(type, value, c.getTreasures());
+                }
+                else if (item instanceof Artifact) {
+                    Artifact a = (Artifact) item;
+
+                    if (a.getName().equals(value) && type.equals("Name") && !a.getName().equals("") || a.getIndex() == index && type.equals("Index")) {
+                        this.searchDisplayHelper(a);
+                        return;
+                    }
+                    else if (a.getType().equals(value) && type.equals("Type")) {
+                        this.typeList.add(a);
+                    }
+                }
+                else if (item instanceof Treasure) {
+                    Treasure t = (Treasure) item;
+
+                    if (t.getName().equals(value) && type.equals("Name") && !t.getName().equals("") || t.getIndex() == index && type.equals("Index")) {
+                        this.searchDisplayHelper(t);
+                        return;
+                    }
+                    else if (t.getType().equals(value) && type.equals("Type")) {
+                        this.typeList.add(t);
+                    }
+                }
+            }
         }
-        else if (type.equals("Type") && this.typeLookup.containsKey(value)) {
-            this.searchDisplayHelper(this.typeLookup.get(value));
+    }  // end recursive search workhorse
+
+    /**
+     * search function that sets things up for the search, then calls the recursive search
+     */
+    private void search(String type, String value) {
+        this.textArea.setText(null);
+        this.typeList = new ArrayList<CaveElement>();
+
+        this.search(type, value, this.cave);
+
+        if (this.typeList.size() > 0) {
+            this.searchDisplayHelper(this.typeList);
         }
-        else {
-            this.textArea.append("Search returned no result\n");
-        }
-    } // end search
+    }  // end search start function
 
     /**
      * Format search output that is more helpful than just a name
      */
     private void searchDisplayHelper(CaveElement element) {
+
         this.textArea.append("Index: " + element.getIndex() + NEWLINE);
         this.textArea.append("Name: " + element.getName() + NEWLINE);
 
