@@ -5,6 +5,8 @@
  * Purpose: user interface for the sorcerers cave game project
  */
 import javax.swing.*;
+import javax.swing.border.LineBorder;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
@@ -16,6 +18,11 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+//TODO: age, height, weight for creature??
+//TODO: implement search through his array structure
+//TODO: implement comparator / sort functions
+
+
 public class SorcerersCave extends JPanel implements ActionListener {
     private static final Font DEFAULT_FONT = new Font("Monospaced", Font.BOLD, 16);
     private static final char PARTY = 'p';
@@ -25,11 +32,11 @@ public class SorcerersCave extends JPanel implements ActionListener {
     private static final String NEWLINE = "\n";
 
     private JFileChooser fileChooser;
-    private JButton openButton, searchButton, displayButton;
+    private JButton openButton, searchButton, displayButton, sortButton;
     private File gameFile;
     private JTextArea textArea;
-    private static JTextField textField;
-    private JComboBox<String> comboBox;
+    private static JTextField searchField;
+    private JComboBox<String> searchSelectorBox, comparatorBox, typeSelectorBox;
     private static Boolean sentinel = false;
 
     private Cave cave = new Cave();
@@ -40,85 +47,192 @@ public class SorcerersCave extends JPanel implements ActionListener {
     public SorcerersCave() {  // constructor
         setLayout(new GridBagLayout());
 
-        // settings for most components
-        GridBagConstraints c = new GridBagConstraints();
-        c.fill = GridBagConstraints.BOTH;
+        GridBagConstraints c = getBaseGBConstraints(); // textarea
         c.weightx = 1.0;
         c.weighty = 1.0;
-
-        this.textArea = new JTextArea(20, 80);
         c.gridwidth = 3;
         c.gridx = 0;
         c.gridy = 0;
+        c.insets = new Insets(5, 5, 5, 5);
+        this.textArea = new JTextArea(20, 80);
         this.textArea.setFont(DEFAULT_FONT);
         JScrollPane scrollPane = new JScrollPane(this.textArea);
         add(scrollPane, c);
 
+        JPanel searchPanel = new JPanel();  // search panel, houses searchField and searchSelectorBox
+        GridBagLayout searchGBC = new GridBagLayout();
+        searchPanel.setLayout(searchGBC);
+        searchPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Search"));
+
+        c = getBaseGBConstraints();  // searchSelectorBox
         c.weightx = 0.05;
         c.weighty = 0.05;
+        c.ipady = 0;
+        c.gridy = 0;
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.insets = new Insets(0, 5, 5, 5);
+        this.searchSelectorBox = new JComboBox<String>();
+        this.searchSelectorBox.addItem("Index");
+        this.searchSelectorBox.addItem("Type");
+        this.searchSelectorBox.addItem("Name");
+        this.searchSelectorBox.setFont(DEFAULT_FONT);
+        searchPanel.add(this.searchSelectorBox, c);
 
-        textField = new JTextField("Search Target");
-        textField.setFont(DEFAULT_FONT);
-        textField.setForeground(Color.lightGray);
-        textField.addActionListener(this);
-        textField.getDocument().addDocumentListener(new DocumentListener() {  // tracks user actually using the textfield
+        c = getBaseGBConstraints();  // textfield
+        c.weightx = 0.05;
+        c.weighty = 0.05;
+        c.gridy = 0;
+        c.gridwidth = 2;
+        c.gridx = 1;
+        c.insets = new Insets(0, 0, 5, 5);
+        searchField = new JTextField("Search Target");
+        searchField.setFont(DEFAULT_FONT);
+        searchField.setForeground(Color.lightGray);
+        searchField.addActionListener(this);
+        searchField.getDocument().addDocumentListener(new DocumentListener() {  // tracks user actually using the textfield
             @Override
             public void insertUpdate(DocumentEvent documentEvent) {
                 sentinel = true;
-                textField.setForeground(Color.black);
+                searchField.setForeground(Color.black);
             }
 
             @Override
             public void removeUpdate(DocumentEvent documentEvent) {
                 sentinel = true;
-                textField.setForeground(Color.black);
+                searchField.setForeground(Color.black);
             }
 
             @Override
             public void changedUpdate(DocumentEvent documentEvent) {
                 sentinel = true;
-                textField.setForeground(Color.black);
+                searchField.setForeground(Color.black);
             }
         });
-        c.ipady = 20;
+        searchPanel.add(searchField, c);
+
+        c = getBaseGBConstraints();
+        c.gridwidth = 3;
         c.gridy = 1;
-        c.gridwidth = 2;
-        add(textField, c);
+        c.gridx = 0;
+        c.insets = new Insets(0, 5, 5, 5);
+        this.add(searchPanel, c);  // add searchPanel to frame
 
-        c.ipady = 0;  // reset ipady to default
 
-        this.comboBox = new JComboBox<String>();
-        this.comboBox.addItem("Index");
-        this.comboBox.addItem("Type");
-        this.comboBox.addItem("Name");
-        this.comboBox.setFont(DEFAULT_FONT);
+        JPanel sortPanel = new JPanel();  // sort panel, houses sortButton, comparatorBox, typeSelectorBox
+        GridBagLayout sortGBC = new GridBagLayout();
+        sortPanel.setLayout(sortGBC);
+        sortPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Sort"));
+
+        c = getBaseGBConstraints();  // typeSelectorBox
+        c.weightx = 0.05;
+        c.weighty = 0.05;
+        c.gridy = 0;
+        c.gridx = 0;
+        c.gridwidth = 1;
+        c.insets = new Insets(0, 5, 5, 5);
+        this.typeSelectorBox = new JComboBox<String>();
+        this.typeSelectorBox.addItem("Treasures");
+        this.typeSelectorBox.addItem("Creatures");
+        this.typeSelectorBox.addActionListener(this);
+        this.typeSelectorBox.setFont(DEFAULT_FONT);
+        sortPanel.add(this.typeSelectorBox, c);
+
+        c = getBaseGBConstraints();  // comparator combo box
+        c.weightx = 0.05;
+        c.weighty = 0.05;
+        c.ipady = 0;
+        c.gridy = 0;
+        c.gridx = 1;
+        c.gridwidth = 1;
+        c.insets = new Insets(0, 0, 5, 5);
+        this.comparatorBox = new JComboBox<String>();
+        this.comparatorBox.addItem("Weight");
+        this.comparatorBox.addItem("Value");
+        this.comparatorBox.setFont(DEFAULT_FONT);
+        //add(this.comparatorBox, c);
+        sortPanel.add(this.comparatorBox, c);
+
+        c = getBaseGBConstraints();  // sort button
+        c.weightx = 0.05;
+        c.weighty = 0.05;
+        c.ipady = 0;
+        c.gridy = 0;
+        c.gridwidth = 1;
         c.gridx = 2;
-        add(this.comboBox, c);
+        c.insets = new Insets(0, 0, 5, 5);
+        this.sortButton = new JButton("Sort");
+        this.sortButton.addActionListener(this);
+        this.sortButton.setFont(DEFAULT_FONT);
+        sortPanel.add(this.sortButton, c);
 
+        c = getBaseGBConstraints();  // sortPanel
+        c.gridwidth = 3;
+        c.gridy = 2;
+        c.gridx = 0;
+        c.insets = new Insets(0, 5, 5, 5);
+        this.add(sortPanel, c);  // add panel to frame
+
+        JPanel controlPanel = new JPanel();  // control panel, houses openButton, displayButton, searchButton
+        GridBagLayout controlGBC = new GridBagLayout();
+        controlPanel.setLayout(controlGBC);
+        controlPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Control"));
+
+        c = getBaseGBConstraints();  // open button
+        c.weightx = 0.05;
+        c.weighty = 0.05;
+        c.ipady = 0;
+        c.gridy = 0;
+        c.gridwidth = 1;
+        c.gridx = 0;
+        c.insets = new Insets(0, 5, 5, 5);
         this.openButton = new JButton("Open File...");
         this.openButton.addActionListener(this);
         this.openButton.setFont(DEFAULT_FONT);
-        c.gridx = 0;
-        c.gridy = 2;
-        c.gridwidth = 1;
-        add(this.openButton, c);
+        controlPanel.add(this.openButton, c);
 
+        c = getBaseGBConstraints();  // display button
+        c.weightx = 0.05;
+        c.weighty = 0.05;
+        c.ipady = 0;
+        c.gridy = 0;
+        c.gridwidth = 1;
+        c.gridx = 1;
+        c.insets = new Insets(0, 0, 5, 5);
         this.displayButton = new JButton("Display");
         this.displayButton.addActionListener(this);
         this.displayButton.setFont(DEFAULT_FONT);
-        c.gridx = 1;
-        add(this.displayButton, c);
+        controlPanel.add(this.displayButton, c);
 
+        c = getBaseGBConstraints();  // search button
+        c.weightx = 0.05;
+        c.weighty = 0.05;
+        c.ipady = 0;
+        c.gridy = 0;
+        c.gridwidth = 1;
+        c.gridx = 2;
+        c.insets = new Insets(0, 0, 5, 5);
         this.searchButton = new JButton("Search...");
         this.searchButton.addActionListener(this);
         this.searchButton.setFont(DEFAULT_FONT);
-        c.gridx = 2;
-        add(this.searchButton, c);
+        controlPanel.add(this.searchButton, c);
 
+        c = getBaseGBConstraints();  // controlPanel
+        c.gridwidth = 3;
+        c.gridy = 3;
+        c.gridx = 0;
+        c.insets = new Insets(0, 5, 5, 5);
+        this.add(controlPanel, c);  // add panel to frame
 
         this.fileChooser = new JFileChooser();
         this.fileChooser.setCurrentDirectory(new File("."));
     }  // end constructor
+
+    private GridBagConstraints getBaseGBConstraints() {
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.BOTH;
+        return c;
+    }
 
     /**
      * event handler
@@ -152,16 +266,33 @@ public class SorcerersCave extends JPanel implements ActionListener {
                 this.textArea.append("You can't search for anything with the default value." + NEWLINE);
             }
             else {
-                search(this.comboBox.getSelectedItem().toString(), textField.getText());
+                search(this.searchSelectorBox.getSelectedItem().toString(), searchField.getText());
             }
         } // end search button handler
         else if (source == this.displayButton) {
             textArea.setText(null);
             this.textArea.append(this.cave.toString().replaceAll("\n\n", "\n"));
         } // end display button handler
-        else if (source == textField && sentinel) {  // can just hit enter after typing in textField
-            search(this.comboBox.getSelectedItem().toString(), textField.getText());
+        else if (source == searchField && sentinel) {  // can just hit enter after typing in searchField
+            search(this.searchSelectorBox.getSelectedItem().toString(), searchField.getText());
         } // end enter pressed in text field
+        else if (source == this.typeSelectorBox) {
+            this.comparatorBox.removeAllItems();
+
+            if (this.typeSelectorBox.getSelectedItem().equals("Creatures")) {
+                this.comparatorBox.addItem("Name");
+                this.comparatorBox.addItem("Age");
+                this.comparatorBox.addItem("Height");
+                this.comparatorBox.addItem("Weight");
+                this.comparatorBox.addItem("Empathy");
+                this.comparatorBox.addItem("Fear");
+                this.comparatorBox.addItem("Carrying Capacity");
+            }
+            else if (this.typeSelectorBox.getSelectedItem().equals("Treasures")) {
+                this.comparatorBox.addItem("Weight");
+                this.comparatorBox.addItem("Value");
+            }
+        }  // end type selector handler
     } // end actionPerformed
 
     /**
@@ -289,6 +420,7 @@ public class SorcerersCave extends JPanel implements ActionListener {
                     }
                 }  // end line filter
             }  // end file reader loop
+            bufferedReader.close();
         }
         catch (Exception e) {
             e.printStackTrace();
