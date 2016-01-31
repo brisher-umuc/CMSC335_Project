@@ -296,6 +296,9 @@ public class SorcerersCave extends JPanel implements ActionListener {
                 this.comparatorBox.addItem("Value");
             }
         }  // end type selector handler
+        else if (source == this.sortButton) {
+            this.sort(this.typeSelectorBox.getSelectedItem(), this.comparatorBox.getSelectedItem());
+        }
     } // end actionPerformed
 
     /**
@@ -328,7 +331,7 @@ public class SorcerersCave extends JPanel implements ActionListener {
                             linker.put(party.getIndex(), party);
 
                             break;
-                        case CREATURE:  //c:<index>:<type>:<name>:<party>:<empathy>:<fear>:<carrying capacity>
+                        case CREATURE:  //c:<index>:<type>:<name>:<party>:<empathy>:<fear>:<carrying capacity>[:<age>:<height>:<weight>]
                             Creature creature = new Creature(parts[3]);
 
                             creature.setIndex(Integer.valueOf(parts[1]));
@@ -337,6 +340,15 @@ public class SorcerersCave extends JPanel implements ActionListener {
                             creature.setEmpathy(Integer.valueOf(parts[5]));
                             creature.setFear(Integer.valueOf(parts[6]));
                             creature.setCapacity(Integer.valueOf(parts[7]));
+                            if (parts.length > 7) {
+                                creature.setAge(Integer.valueOf(parts[8]));
+                            }
+                            if (parts.length > 8) {
+                                creature.setHeight(Integer.valueOf(parts[9]));
+                            }
+                            if (parts.length > 9) {
+                                creature.setWeight(Integer.valueOf(parts[10]));
+                            }
 
                             if (creature.getParty() == 0) {
                                 this.cave.getElements().add(creature);

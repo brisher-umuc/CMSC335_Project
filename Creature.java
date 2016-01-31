@@ -4,7 +4,7 @@
  * Author: ben risher
  * Purpose:  Creature class to describe creatures in the Sorcerer's Cave game
  */
-import java.util.ArrayList;
+import java.util.*;
 
 public class Creature extends CaveElement {
     //    c:<index>:<type>:<name>:<party>:<empathy>:<fear>:<carrying capacity>
@@ -13,11 +13,33 @@ public class Creature extends CaveElement {
     private int empathy = 0;
     private int fear = 0;
     private int capacity = 0;
+    private int weight = 0;
+    private int height = 0;
+    private int age = 0;
     private ArrayList<Treasure> treasures = new ArrayList<Treasure>();
     private ArrayList<Artifact> artifacts = new ArrayList<Artifact>();
 
     public Creature(String _name) {
         this.name = _name;
+    }
+
+    public int getWeight() {
+        return weight;
+    }
+    public void setWeight(int weight) {
+        this.weight = weight;
+    }
+    public int getHeight() {
+        return height;
+    }
+    public void setHeight(int height) {
+        this.height = height;
+    }
+    public int getAge() {
+        return age;
+    }
+    public void setAge(int age) {
+        this.age = age;
     }
     public ArrayList<Treasure> getTreasures() {
         return treasures;
@@ -84,5 +106,17 @@ public class Creature extends CaveElement {
         retval += "\n";
 
         return retval;
+    }
+
+    public void sortTreasures(String compareType) {
+        Comparator<Treasure> comparator;
+
+        if (compareType.equals("Weight")) {
+            comparator = Comparator.comparing(e -> e.getWeight());
+        }
+        else {
+            comparator = Comparator.comparing(e -> e.getValue());
+        }
+        Collections.sort(this.treasures, comparator);
     }
 }
