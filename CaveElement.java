@@ -5,7 +5,7 @@
  * Purpose:  BaseClass for Artifacts, Creatures, Treasures, and Parties to inherit from
  */
 public class CaveElement  {
-    int index = 0;
+    private int index = 0;
     String name = "";
 
     public int getIndex() {

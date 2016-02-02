@@ -6,7 +6,7 @@
  */
 import java.util.ArrayList;
 
-public class Cave extends Object {
+public class Cave {
     private ArrayList<Party> parties = new ArrayList<Party>();
     private ArrayList<CaveElement> elements = new ArrayList<CaveElement>();
 

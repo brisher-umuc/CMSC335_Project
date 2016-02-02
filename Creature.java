@@ -117,6 +117,7 @@ public class Creature extends CaveElement {
         else {
             comparator = Comparator.comparing(e -> e.getValue());
         }
+
         Collections.sort(this.treasures, comparator);
     }
 }

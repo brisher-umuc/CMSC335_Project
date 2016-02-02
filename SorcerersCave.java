@@ -15,8 +15,6 @@ import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -33,12 +31,17 @@ public class SorcerersCave extends JPanel implements ActionListener {
     private static final char TREASURE = 't';
     private static final String NEWLINE = "\n";
 
-    private JFileChooser fileChooser;
-    private JButton openButton, searchButton, displayButton, sortButton;
+    private final JFileChooser fileChooser;
+    private final JButton openButton;
+    private final JButton searchButton;
+    private final JButton displayButton;
+    private final JButton sortButton;
     private File gameFile;
-    private JTextArea textArea;
+    private final JTextArea textArea;
     private static JTextField searchField;
-    private JComboBox<String> searchSelectorBox, comparatorBox, typeSelectorBox;
+    private final JComboBox<String> searchSelectorBox;
+    private final JComboBox<String> comparatorBox;
+    private final JComboBox<String> typeSelectorBox;
     private static Boolean sentinel = false;
 
     private Cave cave = new Cave();
@@ -297,9 +300,36 @@ public class SorcerersCave extends JPanel implements ActionListener {
             }
         }  // end type selector handler
         else if (source == this.sortButton) {
-            this.sort(this.typeSelectorBox.getSelectedItem(), this.comparatorBox.getSelectedItem());
+            this.sort(this.typeSelectorBox.getSelectedItem().toString(), this.comparatorBox.getSelectedItem().toString(), this.cave);
         }
     } // end actionPerformed
+
+    private void sort(String typeSelected, String comparatorSelected, Object obj) {
+        // typeSelected = (Creatures, Treasures)
+        // comparatorSelected = [(Weight, Value), (Name, Age, Weight, Height, Empathy, Fear, Carrying Capacity)]
+
+        if (obj instanceof Cave) {
+            Cave c = (Cave) obj;
+            this.sort(typeSelected, comparatorSelected, c.getParties());
+        }
+        else if (obj instanceof ArrayList) {
+            for (Object item : ((ArrayList) obj).toArray()) {
+                if (item instanceof Party) {  // parties know how to sort creatures list
+                    Party p = (Party) item;
+                    if (typeSelected.equals("Creatures")) {
+                        p.sortCreatures(comparatorSelected);
+                    }
+                    this.sort(typeSelected, comparatorSelected, p.getCreatures());
+                }
+                else if (item instanceof Creature) {  // creatures know how to sort treasures list
+                    Creature c = (Creature) item;
+                    if (typeSelected.equals("Treasures")) {
+                        c.sortTreasures(comparatorSelected);
+                    }
+                }
+            }
+        }
+    }  // end sort
 
     /**
      * Read in the file that the user chooses with game data.
@@ -514,7 +544,7 @@ public class SorcerersCave extends JPanel implements ActionListener {
             Creature creature = (Creature) element;
             if (creature.getParty() != 0) {
                 Party p = (Party) this.search("Index", String.valueOf(creature.getParty()), this.cave.getParties());
-                this.textArea.append("Party: " + p.getName() + NEWLINE);
+                this.textArea.append("Party: " + (p != null ? p.getName() : "Creature's Party not found.") + NEWLINE);
             }
             this.textArea.append("Type: " + creature.getType() + NEWLINE);
             this.textArea.append("Artifacts: \n" + creature.getArtifacts().toString() + NEWLINE);
