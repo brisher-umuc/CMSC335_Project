@@ -12,6 +12,7 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.geom.Arc2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -371,13 +372,13 @@ public class SorcerersCave extends JPanel implements ActionListener {
                             creature.setFear(Integer.valueOf(parts[6]));
                             creature.setCapacity(Integer.valueOf(parts[7]));
                             if (parts.length > 7) {
-                                creature.setAge(Integer.valueOf(parts[8]));
+                                creature.setAge(Double.valueOf(parts[8]));
                             }
                             if (parts.length > 8) {
-                                creature.setHeight(Integer.valueOf(parts[9]));
+                                creature.setHeight(Double.valueOf(parts[9]));
                             }
                             if (parts.length > 9) {
-                                creature.setWeight(Integer.valueOf(parts[10]));
+                                creature.setWeight(Double.valueOf(parts[10]));
                             }
 
                             if (creature.getParty() == 0) {

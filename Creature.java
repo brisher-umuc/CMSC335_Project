@@ -13,9 +13,9 @@ public class Creature extends CaveElement {
     private int empathy = 0;
     private int fear = 0;
     private int capacity = 0;
-    private int weight = 0;
-    private int height = 0;
-    private int age = 0;
+    private double weight = 0;
+    private double height = 0;
+    private double age = 0;
     private ArrayList<Treasure> treasures = new ArrayList<Treasure>();
     private ArrayList<Artifact> artifacts = new ArrayList<Artifact>();
 
@@ -23,22 +23,22 @@ public class Creature extends CaveElement {
         this.name = _name;
     }
 
-    public int getWeight() {
+    public double getWeight() {
         return weight;
     }
-    public void setWeight(int weight) {
+    public void setWeight(double weight) {
         this.weight = weight;
     }
-    public int getHeight() {
+    public double getHeight() {
         return height;
     }
-    public void setHeight(int height) {
+    public void setHeight(double height) {
         this.height = height;
     }
-    public int getAge() {
+    public double getAge() {
         return age;
     }
-    public void setAge(int age) {
+    public void setAge(double age) {
         this.age = age;
     }
     public ArrayList<Treasure> getTreasures() {
@@ -93,14 +93,14 @@ public class Creature extends CaveElement {
             retval += "\n--> " + this.treasures;
         }
         else if (this.treasures.size() > 0) {
-            retval += "\n-> " + this.treasures;
+            retval += "\n-> Treasures: " + this.treasures;
         }
 
         if (this.getParty() == 0 && this.artifacts.size() > 0) {
             retval += "\n--> " + this.artifacts;
         }
         else if (this.artifacts.size() > 0) {
-            retval += "\n-> " + this.artifacts;
+            retval += "\n-> Artifacts: " + this.artifacts;
         }
 
         retval += "\n";
