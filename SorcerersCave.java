@@ -12,19 +12,13 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.geom.Arc2D;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-//TODO: age, height, weight for creature??
-//TODO: implement search through his array structure
-//TODO: implement comparator / sort functions
-
-
-public class SorcerersCave extends JPanel implements ActionListener {
+public class SorcerersCave extends JPanel {
     private static final Font DEFAULT_FONT = new Font("Monospaced", Font.BOLD, 16);
     private static final char PARTY = 'p';
     private static final char CREATURE = 'c';
@@ -45,6 +39,8 @@ public class SorcerersCave extends JPanel implements ActionListener {
     private final JComboBox<String> typeSelectorBox;
     private static Boolean sentinel = false;
 
+    private final HashMap<String, ArrayList<String>> attributesList = new HashMap<>();
+
     private Cave cave = new Cave();
     private ArrayList<CaveElement> typeList;
 
@@ -53,6 +49,15 @@ public class SorcerersCave extends JPanel implements ActionListener {
      */
     public SorcerersCave() {  // constructor
         setLayout(new GridBagLayout());
+
+        // attributes list to populate the sort comparator dropdown
+        attributesList.put("Creatures", new ArrayList<String>() {
+            {add("Name"); add("Age"); add("Height"); add("Weight");
+            add("Empathy"); add("Fear"); add("Carrying Capacity");}} );
+        attributesList.put("Treasures", new ArrayList<String>() {{add("Weight"); add("Value");}});
+
+        this.fileChooser = new JFileChooser();
+        this.fileChooser.setCurrentDirectory(new File("."));
 
         GridBagConstraints c = getBaseGBConstraints(); // textarea
         c.weightx = 1.0;
@@ -96,7 +101,11 @@ public class SorcerersCave extends JPanel implements ActionListener {
         searchField = new JTextField("Search Target");
         searchField.setFont(DEFAULT_FONT);
         searchField.setForeground(Color.lightGray);
-        searchField.addActionListener(this);
+        searchField.addActionListener(ae -> {
+            if (sentinel) {
+                search(this.searchSelectorBox.getSelectedItem().toString(), searchField.getText());
+            }
+        });
         searchField.getDocument().addDocumentListener(new DocumentListener() {  // tracks user actually using the textfield
             @Override
             public void insertUpdate(DocumentEvent documentEvent) {
@@ -131,20 +140,6 @@ public class SorcerersCave extends JPanel implements ActionListener {
         sortPanel.setLayout(sortGBC);
         sortPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Sort"));
 
-        c = getBaseGBConstraints();  // typeSelectorBox
-        c.weightx = 0.05;
-        c.weighty = 0.05;
-        c.gridy = 0;
-        c.gridx = 0;
-        c.gridwidth = 1;
-        c.insets = new Insets(0, 5, 5, 5);
-        this.typeSelectorBox = new JComboBox<String>();
-        this.typeSelectorBox.addItem("Treasures");
-        this.typeSelectorBox.addItem("Creatures");
-        this.typeSelectorBox.addActionListener(this);
-        this.typeSelectorBox.setFont(DEFAULT_FONT);
-        sortPanel.add(this.typeSelectorBox, c);
-
         c = getBaseGBConstraints();  // comparator combo box
         c.weightx = 0.05;
         c.weighty = 0.05;
@@ -160,6 +155,26 @@ public class SorcerersCave extends JPanel implements ActionListener {
         //add(this.comparatorBox, c);
         sortPanel.add(this.comparatorBox, c);
 
+        c = getBaseGBConstraints();  // typeSelectorBox
+        c.weightx = 0.05;
+        c.weighty = 0.05;
+        c.gridy = 0;
+        c.gridx = 0;
+        c.gridwidth = 1;
+        c.insets = new Insets(0, 5, 5, 5);
+        this.typeSelectorBox = new JComboBox<String>();
+        this.typeSelectorBox.addItem("Treasures");
+        this.typeSelectorBox.addItem("Creatures");
+        this.typeSelectorBox.addActionListener(ae -> {
+            this.comparatorBox.removeAllItems();
+
+            for (String st : attributesList.get(this.typeSelectorBox.getSelectedItem())) {
+                this.comparatorBox.addItem(st);
+            }});
+        this.typeSelectorBox.setFont(DEFAULT_FONT);
+        sortPanel.add(this.typeSelectorBox, c);
+
+
         c = getBaseGBConstraints();  // sort button
         c.weightx = 0.05;
         c.weighty = 0.05;
@@ -169,7 +184,11 @@ public class SorcerersCave extends JPanel implements ActionListener {
         c.gridx = 2;
         c.insets = new Insets(0, 0, 5, 5);
         this.sortButton = new JButton("Sort");
-        this.sortButton.addActionListener(this);
+        this.sortButton.addActionListener(ae -> {
+            this.sort(this.typeSelectorBox.getSelectedItem().toString(), this.comparatorBox.getSelectedItem().toString(), this.cave);
+            this.textArea.setText(null);
+            this.textArea.append(this.cave.toString().replaceAll("\n\n", "\n"));
+        });
         this.sortButton.setFont(DEFAULT_FONT);
         sortPanel.add(this.sortButton, c);
 
@@ -194,7 +213,19 @@ public class SorcerersCave extends JPanel implements ActionListener {
         c.gridx = 0;
         c.insets = new Insets(0, 5, 5, 5);
         this.openButton = new JButton("Open File...");
-        this.openButton.addActionListener(this);
+        this.openButton.addActionListener(ae -> {
+            if (this.fileChooser.showOpenDialog(this.openButton) == JFileChooser.APPROVE_OPTION) {
+                this.gameFile = this.fileChooser.getSelectedFile();
+                textArea.setText(null);
+
+                JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);  // i wanted to see which file was currently open
+                frame.setTitle("Sorcerer's Cave [" + this.gameFile.toString() + "]");
+
+                if (this.cave.getParties().size() > 0 || this.cave.getElements().size() > 0) {
+                    // if the cave has been populated before, use a new cave
+                    // essentially, every opening of a file constitutes a new game
+                    this.cave = new Cave();
+                } readInFile(); }});
         this.openButton.setFont(DEFAULT_FONT);
         controlPanel.add(this.openButton, c);
 
@@ -207,7 +238,10 @@ public class SorcerersCave extends JPanel implements ActionListener {
         c.gridx = 1;
         c.insets = new Insets(0, 0, 5, 5);
         this.displayButton = new JButton("Display");
-        this.displayButton.addActionListener(this);
+        this.displayButton.addActionListener(ae -> {
+            textArea.setText(null);
+            this.textArea.append(this.cave.toString().replaceAll("\n\n", "\n"));
+        });
         this.displayButton.setFont(DEFAULT_FONT);
         controlPanel.add(this.displayButton, c);
 
@@ -220,7 +254,15 @@ public class SorcerersCave extends JPanel implements ActionListener {
         c.gridx = 2;
         c.insets = new Insets(0, 0, 5, 5);
         this.searchButton = new JButton("Search...");
-        this.searchButton.addActionListener(this);
+        this.searchButton.addActionListener(ae -> {
+            textArea.setText(null);
+
+            if (!sentinel) {  // user never entered search criteria
+                this.textArea.append("You can't search for anything with the default value." + NEWLINE);
+            }
+            else {
+                search(this.searchSelectorBox.getSelectedItem().toString(), searchField.getText());
+            }});
         this.searchButton.setFont(DEFAULT_FONT);
         controlPanel.add(this.searchButton, c);
 
@@ -231,8 +273,6 @@ public class SorcerersCave extends JPanel implements ActionListener {
         c.insets = new Insets(0, 5, 5, 5);
         this.add(controlPanel, c);  // add panel to frame
 
-        this.fileChooser = new JFileChooser();
-        this.fileChooser.setCurrentDirectory(new File("."));
     }  // end constructor
 
     /**
@@ -243,67 +283,6 @@ public class SorcerersCave extends JPanel implements ActionListener {
         c.fill = GridBagConstraints.BOTH;
         return c;
     }  // end getBaseConstraints
-
-    /**
-     * event handler
-     **/
-    public void actionPerformed(ActionEvent event) {
-        Object source = event.getSource();
-
-        if (source == this.openButton) {
-            if (this.fileChooser.showOpenDialog(this.openButton) == JFileChooser.APPROVE_OPTION) {
-                this.gameFile = this.fileChooser.getSelectedFile();
-                textArea.setText(null);
-
-                JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);  // i wanted to see which file was currently open
-                frame.setTitle("Sorcerer's Cave [" + this.gameFile.toString() + "]");
-
-                if (this.cave.getParties().size() > 0 || this.cave.getElements().size() > 0) {
-                    // if the cave has been populated before, use a new cave
-                    // essentially, every opening of a file constitutes a new game
-                    this.cave = new Cave();
-                }
-                readInFile();
-            }
-        } // end open button handler
-        else if (source == this.searchButton) {
-            textArea.setText(null);
-
-            if (!sentinel) {  // user never entered search criteria
-                this.textArea.append("You can't search for anything with the default value." + NEWLINE);
-            }
-            else {
-                search(this.searchSelectorBox.getSelectedItem().toString(), searchField.getText());
-            }
-        } // end search button handler
-        else if (source == this.displayButton) {
-            textArea.setText(null);
-            this.textArea.append(this.cave.toString().replaceAll("\n\n", "\n"));
-        } // end display button handler
-        else if (source == searchField && sentinel) {  // can just hit enter after typing in searchField
-            search(this.searchSelectorBox.getSelectedItem().toString(), searchField.getText());
-        } // end enter pressed in text field
-        else if (source == this.typeSelectorBox) {
-            this.comparatorBox.removeAllItems();
-
-            if (this.typeSelectorBox.getSelectedItem().equals("Creatures")) {
-                this.comparatorBox.addItem("Name");
-                this.comparatorBox.addItem("Age");
-                this.comparatorBox.addItem("Height");
-                this.comparatorBox.addItem("Weight");
-                this.comparatorBox.addItem("Empathy");
-                this.comparatorBox.addItem("Fear");
-                this.comparatorBox.addItem("Carrying Capacity");
-            }
-            else if (this.typeSelectorBox.getSelectedItem().equals("Treasures")) {
-                this.comparatorBox.addItem("Weight");
-                this.comparatorBox.addItem("Value");
-            }
-        }  // end type selector handler
-        else if (source == this.sortButton) {
-            this.sort(this.typeSelectorBox.getSelectedItem().toString(), this.comparatorBox.getSelectedItem().toString(), this.cave);
-        }
-    } // end actionPerformed
 
     private void sort(String typeSelected, String comparatorSelected, Object obj) {
         // typeSelected = (Creatures, Treasures)
