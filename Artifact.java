@@ -31,6 +31,15 @@ public class Artifact extends CaveElement {
         this.type = type;
     }
     public String toString() {
-        return this.getName();
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("    Artifact: ");
+        sb.append(this.name);
+        sb.append("\n");
+        sb.append("      Index: ");
+        sb.append(this.getIndex());
+        sb.append("\n");
+
+        return sb.toString();
     }
 }  // end Artifact

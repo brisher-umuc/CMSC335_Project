@@ -53,5 +53,22 @@ public class Treasure extends CaveElement {
     public double getW() {return weight;}
     public int getV() {return value;}
 
-    public String toString() { return this.getType(); }
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("    Treasure: ");
+        sb.append(this.name);
+        sb.append("\n");
+        sb.append("      Index: ");
+        sb.append(this.getIndex());
+        sb.append("\n");
+        sb.append("      Weight: ");
+        sb.append(this.weight);
+        sb.append("\n");
+        sb.append("      Value: ");
+        sb.append(this.value);
+        sb.append("\n");
+
+        return sb.toString();
+    }
 }  // end Treasure

@@ -63,12 +63,20 @@ public class Party extends CaveElement {
     }
 
     public String toString() {
-        String retval = "";
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("Party: ");
+        sb.append(this.name);
+        sb.append(" (");
+        sb.append(this.getIndex());
+        sb.append(")");
+        sb.append("\n");
 
         for (Creature creature: creatures) {
-            retval += creature;
+            sb.append(creature);
+            sb.append("\n");
         }
 
-        return retval;
+        return sb.toString();
     }
 }

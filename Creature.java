@@ -121,27 +121,43 @@ public class Creature extends CaveElement {
     public int getC() {return capacity;}
 
     public String toString() {
-        String retval = "";
+        StringBuilder sb = new StringBuilder();
 
-        retval += this.getName();
+        sb.append("  Creature: ");
+        sb.append(this.name);
+        sb.append("\n");
+        sb.append("    Index: ");
+        sb.append(this.getIndex());
+        sb.append("\n");
+        sb.append("    Weight: ");
+        sb.append(this.weight);
+        sb.append("\n");
+        sb.append("    Height: ");
+        sb.append(this.height);
+        sb.append("\n");
+        sb.append("    Age: ");
+        sb.append(this.age);
+        sb.append("\n");
+        sb.append("    Fear: ");
+        sb.append(this.fear);
+        sb.append("\n");
+        sb.append("    Empathy: ");
+        sb.append(this.empathy);
+        sb.append("\n");
+        sb.append("    Carrying Capacity: ");
+        sb.append(this.capacity);
+        sb.append("\n");
 
-        if (this.getParty() == 0 && this.treasures.size() > 0) {
-            retval += "\n--> " + this.treasures;
+        for (Treasure t: this.treasures) {
+            sb.append(t);
+            sb.append("\n");
         }
-        else if (this.treasures.size() > 0) {
-            retval += "\n-> Treasures: " + this.treasures;
+        for (Artifact a: this.artifacts) {
+            sb.append(a);
+            sb.append("\n");
         }
 
-        if (this.getParty() == 0 && this.artifacts.size() > 0) {
-            retval += "\n--> " + this.artifacts;
-        }
-        else if (this.artifacts.size() > 0) {
-            retval += "\n-> Artifacts: " + this.artifacts;
-        }
-
-        retval += "\n";
-
-        return retval;
+        return sb.toString();
     }
 
     public void sortTreasures(String compareType) {
