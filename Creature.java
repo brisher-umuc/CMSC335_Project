@@ -19,8 +19,19 @@ public class Creature extends CaveElement {
     private ArrayList<Treasure> treasures = new ArrayList<Treasure>();
     private ArrayList<Artifact> artifacts = new ArrayList<Artifact>();
 
+    public boolean busyFlag = false;
     public Creature(String _name) {
         this.name = _name;
+    }
+
+    public Creature(String _name, int _index, String _type, int _party, int _empathy, int _fear, int _capacity) {
+        setIndex(_index);
+        setName(_name);
+        type = _type;
+        party = _party;
+        empathy = _empathy;
+        fear = _fear;
+        capacity = _capacity;
     }
 
     public double getWeight() {
@@ -83,6 +94,14 @@ public class Creature extends CaveElement {
     public void setCapacity(int capacity) {
         this.capacity = capacity;
     }
+
+    // helpers for easy reflection
+    public double getW() {return weight;}
+    public double getH() {return height;}
+    public double getA() {return age;}
+    public int getE() {return empathy;}
+    public int getF() {return fear;}
+    public int getC() {return capacity;}
 
     public String toString() {
         String retval = "";

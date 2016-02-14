@@ -12,6 +12,12 @@ public class Artifact extends CaveElement {
     public Artifact(String _name) {
         this.name = _name;
     }
+    public Artifact(String _name, int _index, String _type, int _creature) {
+        setName(_name);
+        setIndex(_index);
+        type = _type;
+        creature = _creature;
+    }
     public int getCreature() {
         return creature;
     }

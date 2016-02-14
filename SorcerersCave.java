@@ -4,8 +4,6 @@
  * Author: ben risher
  * Purpose: user interface for the sorcerers cave game project
  */
-import com.sun.org.apache.bcel.internal.generic.NEW;
-
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -19,9 +17,13 @@ import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
+
+//TODO: change tostring to spew all info about each thing
 
 public class SorcerersCave extends JPanel {
     private static final Font DEFAULT_FONT = new Font("Monospaced", Font.BOLD, 16);
@@ -34,17 +36,11 @@ public class SorcerersCave extends JPanel {
 
     private final JFileChooser fileChooser;
     private final JButton openButton;
-    private final JButton searchButton;
-    private final JButton displayButton;
-    private final JButton sortButton;
     private File gameFile;
-    private final JTree treeArea;
-    private final ToolTipTreeNode caveNode;
-    private final ToolTipTreeNode orphanNode;
+    private final JTree treeDisplay;
+    private ToolTipTreeNode caveNode, orphanNode;
     private static JTextField searchField;
-    private final JComboBox<String> searchSelectorBox;
-    private final JComboBox<String> comparatorBox;
-    private final JComboBox<String> typeSelectorBox;
+    private final JComboBox<String> searchSelectorBox,comparatorBox, typeSelectorBox;
     private static Boolean sentinel = false;
 
     private final HashMap<String, ArrayList<String>> attributesList = new HashMap<>();
@@ -69,6 +65,8 @@ public class SorcerersCave extends JPanel {
         topPanel.setBorder(new EmptyBorder(5,5,5,5));
         bottomPanel.setBorder(new EmptyBorder(5,5,5,5));
 
+        JButton searchButton, displayButton, sortButton;
+
         // attributes list to populate the sort comparator dropdown
         attributesList.put("Creatures", new ArrayList<String>() {
             {add("Name"); add("Age"); add("Height"); add("Weight");
@@ -82,7 +80,7 @@ public class SorcerersCave extends JPanel {
         ToolTipTreeNode pseudoRootNode = new ToolTipTreeNode("I'm hidden");  // workaround for having multi-rooted jtree
         caveNode = new ToolTipTreeNode("The Cave");
         orphanNode = new ToolTipTreeNode("The Orphans");
-        treeArea = new JTree(pseudoRootNode) {
+        treeDisplay = new JTree(pseudoRootNode) {
             public String getToolTipText(MouseEvent evt) {
                 if (getRowForLocation(evt.getX(), evt.getY()) == -1) {
                     return null;
@@ -91,16 +89,17 @@ public class SorcerersCave extends JPanel {
                 return ((ToolTipTreeNode) curPath.getLastPathComponent()).getToolTipText();
             }
         };
-        treeArea.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Cave Display"));
-        treeArea.setToolTipText("");
+        treeDisplay.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Cave Display"));
+        treeDisplay.setToolTipText("");
         pseudoRootNode.add(caveNode);
         pseudoRootNode.add(orphanNode);
-        treeArea.expandRow(0);
-        treeArea.setRootVisible(false);
-        treeArea.setShowsRootHandles(true);
-        ToolTipManager.sharedInstance().registerComponent(treeArea);
-        treeArea.setFont(DEFAULT_FONT);
-        JScrollPane scrollPane = new JScrollPane(treeArea);
+        treeDisplay.expandRow(0);
+        treeDisplay.setRootVisible(false);
+        treeDisplay.setShowsRootHandles(true);
+        ToolTipManager.sharedInstance().registerComponent(treeDisplay);
+        treeDisplay.setFont(DEFAULT_FONT);
+        JScrollPane scrollPane = new JScrollPane(treeDisplay);
+
         treePanel.setPreferredSize(new Dimension(325, 400));
 
         // job panel, houses ... whatever im going to use to display jobs
@@ -149,6 +148,11 @@ public class SorcerersCave extends JPanel {
         comparatorBox.addItem("Weight");
         comparatorBox.addItem("Value");
         comparatorBox.setFont(DEFAULT_FONT);
+        comparatorBox.addActionListener(ae -> {
+            if (comparatorBox.getItemCount() > 0) {
+                populateCave();
+            }
+        });
 
         typeSelectorBox = new JComboBox<>();
         typeSelectorBox.addItem("Treasures");
@@ -162,7 +166,6 @@ public class SorcerersCave extends JPanel {
         sortButton = new JButton("Sort");
         sortButton.addActionListener(ae -> {
             sort(typeSelectorBox.getSelectedItem().toString(), comparatorBox.getSelectedItem().toString(), cave);
-            //TODO: need ot alter the output of the jtree
         });
         sortButton.setFont(DEFAULT_FONT);
 
@@ -176,9 +179,8 @@ public class SorcerersCave extends JPanel {
                 orphanNode.removeAllChildren();
                 caveNode.removeAllChildren();
                 caveNode.getChildCount();
-                DefaultTreeModel model = (DefaultTreeModel)treeArea.getModel();
+                DefaultTreeModel model = (DefaultTreeModel) treeDisplay.getModel();
                 model.reload();
-                //TODO: collapse jtree?  needed?  dunno
 
                 JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(this);  // i wanted to see which file was currently open
                 frame.setTitle("Sorcerer's Cave [" + gameFile.toString() + "]");
@@ -192,8 +194,12 @@ public class SorcerersCave extends JPanel {
 
         displayButton = new JButton("Display");
         displayButton.addActionListener(ae -> {
-            System.out.println("change me!");
-            //TODO: make display meaningful
+            JTextArea textArea = new JTextArea(cave.toString());
+            JScrollPane sp = new JScrollPane(textArea);
+            textArea.setLineWrap(true);
+            textArea.setWrapStyleWord(true);
+            sp.setPreferredSize( new Dimension( 500, 500 ) );
+            JOptionPane.showMessageDialog(null, sp);
         });
         displayButton.setFont(DEFAULT_FONT);
 
@@ -237,17 +243,8 @@ public class SorcerersCave extends JPanel {
         splitPaneHorizontal.setTopComponent(topPanel);
         splitPaneHorizontal.setBottomComponent(bottomPanel);
 
-        add(splitPaneHorizontal, BorderLayout.CENTER);
+        this.add(splitPaneHorizontal, BorderLayout.CENTER);
     }  // end constructor
-
-    /**
-     * Helper for producing some constant gridbagconstraints
-     */
-    private GridBagConstraints getBaseGBConstraints() {
-        GridBagConstraints c = new GridBagConstraints();
-        c.fill = GridBagConstraints.BOTH;
-        return c;
-    }  // end getBaseConstraints
 
     private void sort(String typeSelected, String comparatorSelected, Object obj) {
         // typeSelected = (Creatures, Treasures)
@@ -274,7 +271,179 @@ public class SorcerersCave extends JPanel {
                 }
             }
         }
+        populateCave();
     }  // end sort
+
+    /**
+     * tooltip builder for Creature type
+     */
+    private String buildTooltip(Creature c) {
+        StringBuilder tt = new StringBuilder();
+
+        tt.append("<html>");
+        tt.append(c.getName() + ": " + BREAK);
+        tt.append("Empathy: " + c.getEmpathy() + BREAK);
+        tt.append("Fear: " + c.getFear() + BREAK);
+        tt.append("Capacity: " + c.getCapacity() + BREAK);
+        tt.append("Age: " + c.getAge() + BREAK);
+        tt.append("Height: " + c.getHeight() + BREAK);
+        tt.append("Weight: " + c.getWeight() + BREAK);
+        tt.append("</html>");
+
+        return tt.toString();
+    }
+
+    /**
+     * tooltip builder for Treasure type
+     */
+    private String buildTooltip(Treasure t) {
+        StringBuilder tt = new StringBuilder();
+
+        tt.append("<html>");
+        tt.append("Weight: " + t.getWeight() + BREAK);
+        tt.append("Value: " + t.getValue() + BREAK);
+        tt.append("</html>");
+
+        return tt.toString();
+    }
+
+    /**
+     * Displays the currently selected sorter value for each Treasure.
+     *
+     * Ex.  User has <Treasure> and <Weight> Selected as sort parameters, each
+     *      Treasure will have a (W: XX.X) added to its display in the tree.
+     *
+     * The display's letter is the first letter of the value selected [W]eight, [H]eight, etc...
+     */
+    private String buildAdditionalInfo(Treasure t) {
+        String s = "";
+        Method method;
+
+        char firstChar = comparatorBox.getSelectedItem().toString().charAt(0);
+
+        if ((firstChar != 'V' && firstChar != 'W') || typeSelectorBox.getSelectedItem().equals("Creatures")) {
+            return "";
+        }
+
+        try {
+            method = t.getClass().getMethod("get" + firstChar);
+            s += " (" + firstChar + ": " + method.invoke(t) + ")";
+        }
+        catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace();
+        }
+
+        return s;
+    }
+
+    /**
+     * Displays the currently selected sorter value for each Creature.
+     *
+     * Ex.  User has <Creature> and <Age> Selected as sort parameters, each
+     *      Treasure will have a (A: XX.X) added to its display in the tree.
+     *
+     * The display's letter is the first letter of the value selected [A]ge, [H]eight, etc...
+     */
+    private String buildAdditionalInfo(Creature c) {
+        String s = "";
+        Method method;
+
+        char firstChar = comparatorBox.getSelectedItem().toString().charAt(0);
+
+        if (firstChar == 'V' || firstChar == 'N' || typeSelectorBox.getSelectedItem().equals("Treasures")) {
+            return "";
+        }
+
+        try {
+            method = c.getClass().getMethod("get" + firstChar);
+            s += " (" + firstChar + ": " + method.invoke(c) + ")";
+        }
+        catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace();
+        }
+
+        return s;
+    }
+
+    /**
+     * Populate a new JTree based off of the underlying multitree structure
+     *
+     * This is called when a user
+     *      1:  presses <Sort>
+     *      2:  presses <Open File>
+     *      3:  presses <Search>
+     */
+    private void populateCave() {
+        //TODO: documentation, keep "the cave" and "the orphans" when updating, add in the orphans iterator, find and remove "stuff again"
+        ToolTipTreeNode root = (ToolTipTreeNode) treeDisplay.getModel().getRoot();
+        root.removeAllChildren();
+        caveNode = new ToolTipTreeNode("The Cave");
+        orphanNode = new ToolTipTreeNode("The Orphans");
+        root.add(caveNode);
+        root.add(orphanNode);
+
+        String tooltip = "";
+
+        for (Party p: cave.getParties()) {  // parties and children
+            ToolTipTreeNode localParty = new ToolTipTreeNode(p.getName());
+            caveNode.add(localParty);
+
+            for (Creature c : p.getCreatures()) {
+
+                tooltip = buildTooltip(c);
+
+                ToolTipTreeNode localCreature = new ToolTipTreeNode(c.getName() + buildAdditionalInfo(c), tooltip);
+                localParty.add(localCreature);
+
+                for (Artifact a: c.getArtifacts()) {
+                    ToolTipTreeNode localArtifact = new ToolTipTreeNode(a.getName());
+                    localCreature.add(localArtifact);
+                }
+                for (Treasure t: c.getTreasures()) {
+                    tooltip = buildTooltip(t);
+
+                    ToolTipTreeNode localTreasure = new ToolTipTreeNode(t.getName() + buildAdditionalInfo(t), tooltip);
+                    localCreature.add(localTreasure);
+                }
+            }
+        }
+        populateOrphans();
+
+        DefaultTreeModel model = (DefaultTreeModel) treeDisplay.getModel();
+        model.reload();
+    }
+
+    /**
+     * Populate the orphan nodes of the existing JTree
+     *
+     * This is called anytime a call to populateCave is made
+     */
+     private void populateOrphans() {
+        String tooltip = "";
+
+        for (CaveElement ce: cave.getElements()) {  // orphans
+            if (ce instanceof Treasure) {
+                tooltip = buildTooltip((Treasure) ce);
+            }
+            else if (ce instanceof Creature) {
+                Creature c = (Creature) ce;
+                tooltip = buildTooltip(c);
+                ToolTipTreeNode localCreature = new ToolTipTreeNode(ce.getName() + buildAdditionalInfo(c), tooltip);
+
+                for (Artifact a: c.getArtifacts()) {
+                    ToolTipTreeNode localArtifact = new ToolTipTreeNode(a.getName());
+                    localCreature.add(localArtifact);
+                }
+                for (Treasure t: c.getTreasures()) {
+                    tooltip = buildTooltip(t);
+                    ToolTipTreeNode localTreasure = new ToolTipTreeNode(t.getName() + buildAdditionalInfo((Treasure) ce), tooltip);
+                    localCreature.add(localTreasure);
+                }
+
+            }
+            orphanNode.add(new ToolTipTreeNode(ce.getName(), tooltip));
+        }
+    }
 
     /**
      * Read in the file that the user chooses with game data.
@@ -283,7 +452,6 @@ public class SorcerersCave extends JPanel {
         String line;
         HashMap<Integer, Party> partyLinker = new HashMap<>();
         HashMap<Integer, CaveElement> linker = new HashMap<>();
-        HashMap<Integer, ToolTipTreeNode> treeLinker = new HashMap<>();
         Scanner sc;
 
         try {
@@ -292,9 +460,6 @@ public class SorcerersCave extends JPanel {
             while ((line = bufferedReader.readLine()) != null) {
                 if (line.trim().length() > 0 && !line.startsWith("/")) {  // ignore empty lines, and comments
                     sc = new Scanner(line).useDelimiter("\\s*:\\s*");
-
-                    ToolTipTreeNode childNode, parentNode;
-                    StringBuilder toolTip;
 
                     String typeDefinition = sc.next();  // find type of the line
                     int index = sc.nextInt();
@@ -306,13 +471,8 @@ public class SorcerersCave extends JPanel {
                             Party party = new Party(name);
                             party.setIndex(index);
 
-                            childNode = new ToolTipTreeNode(party.getName());
-
                             cave.getParties().add(party);
-                            caveNode.add(childNode);
-
                             partyLinker.put(party.getIndex(), party);
-                            treeLinker.put(party.getIndex(), childNode);
 
                             break;
                         case CREATURE:  //c:<index>:<type>:<name>:<party>:<empathy>:<fear>:<carrying capacity>[:<age>:<height>:<weight>]
@@ -323,57 +483,30 @@ public class SorcerersCave extends JPanel {
                             int fear = sc.nextInt();
                             int capacity = sc.nextInt();
 
-                            Creature creature = new Creature(name);
-                            toolTip = new StringBuilder();
-
-                            toolTip.append("<html>");
-                            toolTip.append(name + ": " + BREAK);
-                            toolTip.append("Empathy: " + empathy + BREAK);
-                            toolTip.append("Fear: " + fear + BREAK);
-                            toolTip.append("Capacity: " + capacity + BREAK);
-
-                            creature.setIndex(index);
-                            creature.setType(type);
-                            creature.setParty(partyIndex);
-                            creature.setEmpathy(empathy);
-                            creature.setFear(fear);
-                            creature.setCapacity(capacity);
+                            Creature creature = new Creature(name, index, type, partyIndex, empathy, fear, capacity);
 
                             if (sc.hasNext()) {
                                 double age = sc.nextDouble();
-
                                 creature.setAge(age);
-                                toolTip.append("Age: " + age + BREAK);
                             }
                             if (sc.hasNext()) {
                                 double height = sc.nextDouble();
-
                                 creature.setHeight(height);
-                                toolTip.append("Height: " + height + BREAK);
                             }
                             if (sc.hasNext()) {
                                 double weight = sc.nextDouble();
-
                                 creature.setWeight(weight);
-                                toolTip.append("Weight: " + weight + BREAK);
                             }
-                            toolTip.append("</html>");
-                            childNode = new ToolTipTreeNode(creature.getName(), toolTip.toString());
 
-                            if (linker.get(creature.getParty()) != null) {
+                            if (creature.getParty() == 0) {
                                 cave.getElements().add(creature);
-                                orphanNode.add(childNode);
                             }
                             else {
                                 Party p = partyLinker.get(creature.getParty());  // add to structure
                                 p.getCreatures().add(creature);
-
-                                parentNode = treeLinker.get(creature.getParty());  // add to tree
-                                parentNode.add(childNode);
                             }
 
                             linker.put(creature.getIndex(), creature);
-                            treeLinker.put(creature.getIndex(), childNode);
 
                             break;
                         case ARTIFACT:  //a:<index>:<type>:<creature>[:<name>]
@@ -383,32 +516,21 @@ public class SorcerersCave extends JPanel {
 
                             if (sc.hasNext()) {
                                 name = sc.next();
-                                artifact = new Artifact(name);
+                                artifact = new Artifact(name, index, type, creatureIndex);
                             }
                             else {
-                                artifact = new Artifact(type);
+                                artifact = new Artifact(type, index, type, creatureIndex);
                             }
-
-                            artifact.setIndex(index);
-                            artifact.setType(type);
-                            artifact.setCreature(creatureIndex);
-
-                            childNode = new ToolTipTreeNode(artifact.getName());
 
                             // orphan artifacts
                             if (artifact.getCreature() == 0) {
                                 cave.getElements().add(artifact);
-                                orphanNode.add(childNode);
                             }
                             else {
                                 Creature c = (Creature) linker.get(artifact.getCreature());
                                 c.getArtifacts().add(artifact);
-
-                                parentNode = treeLinker.get(artifact.getCreature());
-                                parentNode.add(childNode);
                             }
 
-                            treeLinker.put(artifact.getIndex(), childNode);
                             linker.put(artifact.getIndex(), artifact);
 
                             break;
@@ -418,35 +540,17 @@ public class SorcerersCave extends JPanel {
                             double weight = sc.nextDouble();
                             int value = sc.nextInt();
 
-                            Treasure treasure = new Treasure(type);
-
-                            toolTip = new StringBuilder();
-                            toolTip.append("<html>");
-                            toolTip.append("Weight: " + weight + BREAK);
-                            toolTip.append("Value: " + value + BREAK);
-                            toolTip.append("</html>");
-
-                            treasure.setIndex(index);
-                            treasure.setCreature(creatureIndex);
-                            treasure.setWeight(weight);
-                            treasure.setValue(value);
-
-                            childNode = new ToolTipTreeNode(treasure.getType(), toolTip.toString());
+                            Treasure treasure = new Treasure(type, index, creatureIndex, weight, value);
 
                             if (treasure.getCreature() == 0) {
                                 cave.getElements().add(treasure);
-                                orphanNode.add(childNode);
                             }
                             else {
                                 Creature cr = (Creature) linker.get(treasure.getCreature());
                                 cr.getTreasures().add(treasure);
-
-                                parentNode = treeLinker.get(treasure.getCreature());
-                                parentNode.add(childNode);
                             }
 
                             linker.put(treasure.getIndex(), treasure);
-                            treeLinker.put(treasure.getIndex(), childNode);
 
                             break;
                         case "j":  // TODO: fix this
@@ -454,14 +558,14 @@ public class SorcerersCave extends JPanel {
                             System.out.println("stuff again");
 
                             break;
-
                         default:
                             System.out.println("Not Processed: " + line);
                     }
                 }  // end line filter
             }  // end file reader loop
             bufferedReader.close();
-            DefaultTreeModel model = (DefaultTreeModel) treeArea.getModel();
+            populateCave();
+            DefaultTreeModel model = (DefaultTreeModel) treeDisplay.getModel();
             model.reload();
         }
         catch (Exception e) {
@@ -479,7 +583,6 @@ public class SorcerersCave extends JPanel {
                 index = Integer.valueOf(value.trim());
             }
             catch (NumberFormatException e) {
-                //textArea.append("You didn't specify an actual index.\n");
                 JOptionPane.showMessageDialog(null, "You didn't specify an actual index." + NEWLINE);
                 return null;
             }
@@ -495,7 +598,7 @@ public class SorcerersCave extends JPanel {
                     Party p = (Party) item;
 
                     if (p.getName().equals(value) && type.equals("Name") || p.getIndex() == index && type.equals("Index")) {
-                        searchDisplayHelper(p);
+                        displaySearchResults(p);
                         return p;
                     }
                     search(type, value, p.getCreatures());
@@ -504,7 +607,7 @@ public class SorcerersCave extends JPanel {
                     Creature c = (Creature) item;
 
                     if (c.getName().equals(value) && type.equals("Name") || c.getIndex() == index && type.equals("Index")) {
-                        searchDisplayHelper(c);
+                        displaySearchResults(c);
                         return c;
                     }
                     else if (c.getType().equals(value) && type.equals("Type")) {
@@ -517,7 +620,7 @@ public class SorcerersCave extends JPanel {
                     Artifact a = (Artifact) item;
 
                     if (a.getName().equals(value) && type.equals("Name") && !a.getName().equals("") || a.getIndex() == index && type.equals("Index")) {
-                        searchDisplayHelper(a);
+                        displaySearchResults(a);
                         return a;
                     }
                     else if (a.getType().equals(value) && type.equals("Type")) {
@@ -528,7 +631,7 @@ public class SorcerersCave extends JPanel {
                     Treasure t = (Treasure) item;
 
                     if (t.getName().equals(value) && type.equals("Name") && !t.getName().equals("") || t.getIndex() == index && type.equals("Index")) {
-                        searchDisplayHelper(t);
+                        displaySearchResults(t);
                         return t;
                     }
                     else if (t.getType().equals(value) && type.equals("Type")) {
@@ -544,72 +647,140 @@ public class SorcerersCave extends JPanel {
      * search function that sets things up for the search, then calls the recursive search
      */
     private CaveElement search(String type, String value) {
-        //textArea.setText(null);
-        typeList = new ArrayList<CaveElement>();
+        typeList = new ArrayList<>();
 
         CaveElement ce = search(type, value, cave);
 
         if (typeList.size() > 0) {
-            searchDisplayHelper(typeList);
+            displaySearchResults();
         }
+
         return ce;
     }  // end search start function
 
     /**
-     * Format search output that is more helpful than just a name
+     * display results from pressing <Search> in the JTree, with applicable attributes
      */
-    private void searchDisplayHelper(CaveElement element) {
+    private void displaySearchResults(Party party) {
+        ToolTipTreeNode root = (ToolTipTreeNode) treeDisplay.getModel().getRoot();
+        root.removeAllChildren();
 
-        //textArea.append("Index: " + element.getIndex() + NEWLINE);
-        //textArea.append("Name: " + element.getName() + NEWLINE);
+        ToolTipTreeNode partyNode = new ToolTipTreeNode(party.getName());
+        ToolTipTreeNode indexNode = new ToolTipTreeNode("Index: " + String.valueOf(party.getIndex()));
 
-        if (element instanceof Party) {
-            Party party = (Party) element;
-            //textArea.append("Creatures: \n");
-            for (Creature creature: party.getCreatures()) {
-                //textArea.append("-> " + creature.getName() + NEWLINE);
-            }
+        root.add(partyNode);
+        partyNode.add(indexNode);
+
+        for (Creature c: party.getCreatures()) {
+            ToolTipTreeNode creatureNode = new ToolTipTreeNode("Creature: " + c.getName());
+            partyNode.add(creatureNode);
         }
-        else if (element instanceof Creature) {
-            Creature creature = (Creature) element;
-            if (creature.getParty() != 0) {
-                Party p = (Party) search("Index", String.valueOf(creature.getParty()), cave.getParties());
-                //textArea.append("Party: " + (p != null ? p.getName() : "Creature's Party not found.") + NEWLINE);
-            }
-            //textArea.append("Type: " + creature.getType() + NEWLINE);
-            //textArea.append("Artifacts: \n" + creature.getArtifacts().toString() + NEWLINE);
-            //textArea.append("Treasures: \n" + creature.getTreasures().toString() + NEWLINE);
-            //textArea.append("Traits: \n");
-            //textArea.append("-> Fear: " + creature.getFear() + NEWLINE);
-            //textArea.append("-> Empathy: " + creature.getEmpathy() + NEWLINE);
-            //textArea.append("-> Capacity: " + creature.getCapacity() + NEWLINE);
-        }
-        else if (element instanceof Artifact) {
-            Artifact artifact = (Artifact) element;
-            //textArea.append("Owner: " + artifact.getCreature() + NEWLINE);
-            //textArea.append("Type: " + artifact.getType() + NEWLINE);
-        }
-        else if (element instanceof Treasure) {
-            Treasure treasure = (Treasure) element;
-            //textArea.append("Owner: " + treasure.getCreature() + NEWLINE);
-            //textArea.append("Type: " + treasure.getType() + NEWLINE);
-            //textArea.append("Value: " + treasure.getValue() + NEWLINE);
-            //textArea.append("Weight: " + treasure.getWeight() + NEWLINE);
-        }
-    } // end display helper for single instance items
+
+        DefaultTreeModel model = (DefaultTreeModel) treeDisplay.getModel();
+        model.reload();
+    }
 
     /**
-     * Format search output that is more helpful than just a name
+     * display results from pressing <Search> in the JTree, with applicable attributes
      */
-    private void searchDisplayHelper(ArrayList<CaveElement> elementArrayList) {
+    private void displaySearchResults(Creature creature) {
+        ToolTipTreeNode root = (ToolTipTreeNode) treeDisplay.getModel().getRoot();
+        root.removeAllChildren();
+
+        String tooltip = buildTooltip(creature);
+
+        ToolTipTreeNode creatureNode = new ToolTipTreeNode(creature.getName(), tooltip);
+        creatureNode.add(new ToolTipTreeNode("Index: " + creature.getIndex()));
+        creatureNode.add(new ToolTipTreeNode("Type: " + creature.getType()));
+        creatureNode.add(new ToolTipTreeNode("Party: " + creature.getParty()));
+        creatureNode.add(new ToolTipTreeNode("Empathy: " + creature.getEmpathy()));
+        creatureNode.add(new ToolTipTreeNode("Fear: " + creature.getFear()));
+        creatureNode.add(new ToolTipTreeNode("Capacity: " + creature.getCapacity()));
+        creatureNode.add(new ToolTipTreeNode("Height: " + creature.getHeight()));
+        creatureNode.add(new ToolTipTreeNode("Weight: " + creature.getWeight()));
+        creatureNode.add(new ToolTipTreeNode("Age: " + creature.getAge()));
+
+        root.add(creatureNode);
+
+        for (Artifact a: creature.getArtifacts()) {
+            creatureNode.add(new ToolTipTreeNode("Artifact: " + a.getName()));
+        }
+        for (Treasure t: creature.getTreasures()) {
+            creatureNode.add(new ToolTipTreeNode("Treasure: " + t.getName()));
+        }
+
+        DefaultTreeModel model = (DefaultTreeModel) treeDisplay.getModel();
+        model.reload();
+    }
+
+    /**
+     * display results from pressing <Search> in the JTree, with applicable attributes
+     */
+    private void displaySearchResults() {
         // i kept this display relatively simple, since it's returning an unknown number of values
         // i think the user could use this as a point to start drilling down
         // i.e. search for type=woman, then use a more specific search for more information
-        for (CaveElement element: elementArrayList) {
-            //textArea.append("Index: " + element.getIndex() + NEWLINE);
-            //textArea.append("Name: " + element.getName() + NEWLINE + NEWLINE);
+        ToolTipTreeNode root = (ToolTipTreeNode) treeDisplay.getModel().getRoot();
+        root.removeAllChildren();
+
+        String tooltip = "";
+
+        for (CaveElement element: typeList) {
+            if (element instanceof Creature) {
+                 tooltip = buildTooltip((Creature) element);
+            }
+            else if (element instanceof Treasure) {
+                tooltip = buildTooltip((Treasure) element);
+            }
+            ToolTipTreeNode elementNode = new ToolTipTreeNode(element.getName(), tooltip);
+            elementNode.add(new ToolTipTreeNode("Index: " + element.getIndex()));
+            root.add(elementNode);
         }
-    } // end display helper for multiple elements
+
+        DefaultTreeModel model = (DefaultTreeModel) treeDisplay.getModel();
+        model.reload();
+    }
+
+    /**
+     * display results from pressing <Search> in the JTree, with applicable attributes
+     */
+    private void displaySearchResults(Artifact artifact) {
+        ToolTipTreeNode root = (ToolTipTreeNode) treeDisplay.getModel().getRoot();
+        root.removeAllChildren();
+
+        ToolTipTreeNode artifactNode = new ToolTipTreeNode(artifact.getName());
+        artifactNode.add(new ToolTipTreeNode("Index: " + artifact.getIndex()));
+        artifactNode.add(new ToolTipTreeNode("Type: " + artifact.getType()));
+        artifactNode.add(new ToolTipTreeNode("Creature: " + artifact.getCreature()));
+
+        root.add(artifactNode);
+
+        DefaultTreeModel model = (DefaultTreeModel) treeDisplay.getModel();
+        model.reload();
+    }
+
+    /**
+     * display results from pressing <Search> in the JTree, with applicable attributes
+     */
+    private void displaySearchResults(Treasure treasure) {
+        ToolTipTreeNode root = (ToolTipTreeNode) treeDisplay.getModel().getRoot();
+        root.removeAllChildren();
+
+        String tooltip = buildTooltip(treasure);
+
+        ToolTipTreeNode treasureNode = new ToolTipTreeNode(treasure.getName(), tooltip);
+        treasureNode.add(new ToolTipTreeNode("Index: " + treasure.getIndex()));
+        treasureNode.add(new ToolTipTreeNode("Type: " + treasure.getType()));
+        treasureNode.add(new ToolTipTreeNode("Creature: " + treasure.getCreature()));
+        treasureNode.add(new ToolTipTreeNode("Weight: " + treasure.getWeight()));
+        treasureNode.add(new ToolTipTreeNode("Value: " + treasure.getValue()));
+
+        root.add(treasureNode);
+
+        DefaultTreeModel model = (DefaultTreeModel) treeDisplay.getModel();
+        model.reload();
+
+    }
 
     public static void main(String[] args) {
         JFrame frame = new JFrame("Sorcerer's Cave");

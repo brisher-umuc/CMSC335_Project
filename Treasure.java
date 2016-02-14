@@ -13,39 +13,45 @@ public class Treasure extends CaveElement {
 
     public Treasure(String _type) {
         this.type = _type;
+        this.name = _type;
+    }
+
+    public Treasure(String _type, int _index, int _creature, double _weight, int _value) {
+        setIndex(_index);
+        setName(_type);
+        type = _type;
+        creature = _creature;
+        weight = _weight;
+        value = _value;
     }
 
     public String getType() {
         return type;
     }
-
     public void setType(String type) {
         this.type = type;
     }
-
     public int getCreature() {
         return creature;
     }
-
     public void setCreature(int creature) {
         this.creature = creature;
     }
-
     public double getWeight() {
         return weight;
     }
-
     public void setWeight(double weight) {
         this.weight = weight;
     }
-
     public int getValue() {
         return value;
     }
-
     public void setValue(int value) {
         this.value = value;
     }
+
+    public double getW() {return weight;}
+    public int getV() {return value;}
 
     public String toString() { return this.getType(); }
 }  // end Treasure
