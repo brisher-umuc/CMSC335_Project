@@ -42,6 +42,7 @@ public class SorcerersCave extends JPanel {
     private static JTextField searchField;
     private final JComboBox<String> searchSelectorBox,comparatorBox, typeSelectorBox;
     private static Boolean sentinel = false;
+    private JPanel jobPanel;
 
     private final HashMap<String, ArrayList<String>> attributesList = new HashMap<>();
 
@@ -56,7 +57,7 @@ public class SorcerersCave extends JPanel {
 
         // for the sake of my sanity, defining all the panels here
         JPanel treePanel = new JPanel(new BorderLayout());
-        JPanel jobPanel = new JPanel(new BorderLayout());
+        jobPanel = new JPanel();
         JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
         JPanel sortPanel = new JPanel(new BorderLayout(5, 0));
         JPanel controlPanel = new JPanel(new BorderLayout());
@@ -100,11 +101,14 @@ public class SorcerersCave extends JPanel {
         treeDisplay.setFont(DEFAULT_FONT);
         JScrollPane scrollPane = new JScrollPane(treeDisplay);
 
-        treePanel.setPreferredSize(new Dimension(325, 400));
-
         // job panel, houses ... whatever im going to use to display jobs
         jobPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Current Jobs"));
-        jobPanel.setPreferredSize(new Dimension(175, 400));
+        JScrollPane jobScrollPane = new JScrollPane(jobPanel);
+
+        jobScrollPane.setMinimumSize(new Dimension(325, 525));
+        jobScrollPane.setPreferredSize(new Dimension(325, 525));
+        this.setMinimumSize(new Dimension(800, 500));
+        this.setPreferredSize(new Dimension(800, 700));
 
         // search panel, houses searchField and searchSelectorBox
         searchPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Search"));
@@ -219,8 +223,8 @@ public class SorcerersCave extends JPanel {
         // splitPane vertical separation of jobs and cave display
         JSplitPane splitPaneVertical = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPaneVertical.setRightComponent(treePanel);
-        splitPaneVertical.setLeftComponent(jobPanel);
-        splitPaneVertical.setDividerLocation(0.1f);
+        splitPaneVertical.setLeftComponent(jobScrollPane);
+        //splitPaneVertical.setDividerLocation(1.0);
 
         topPanel.add(splitPaneVertical, BorderLayout.CENTER);
 
@@ -453,6 +457,7 @@ public class SorcerersCave extends JPanel {
         HashMap<Integer, Party> partyLinker = new HashMap<>();
         HashMap<Integer, CaveElement> linker = new HashMap<>();
         Scanner sc;
+        HashMap<String, ArrayList<String>> jobsHashMap = new HashMap<>();
 
         try {
             BufferedReader bufferedReader = new BufferedReader(new FileReader(gameFile));
@@ -463,6 +468,7 @@ public class SorcerersCave extends JPanel {
 
                     String typeDefinition = sc.next();  // find type of the line
                     int index = sc.nextInt();
+
 
                     switch (typeDefinition) {
                         case PARTY:  //p:<index>:<name>
@@ -555,7 +561,20 @@ public class SorcerersCave extends JPanel {
                             break;
                         case "j":  // TODO: fix this
                             //Job j = new Job(linker, partyLinker, jobPanel, new Scanner(line).useDelimiter("\\s*:\\s*"));
-                            System.out.println("stuff again");
+                            sc.next();  // dump the job name
+                            Creature worker = (Creature) linker.get(sc.nextInt());
+
+                            if (jobsHashMap.get(worker.getName()) != null) {
+                                jobsHashMap.get(worker.getName()).add(line);
+                            }
+                            else {
+                                ArrayList<String> localList = new ArrayList<String>();
+                                localList.add(line);
+                                jobsHashMap.put(worker.getName(), localList);
+                            }
+
+
+
 
                             break;
                         default:
@@ -564,6 +583,11 @@ public class SorcerersCave extends JPanel {
                 }  // end line filter
             }  // end file reader loop
             bufferedReader.close();
+
+            if (jobsHashMap.size() > 0) {
+                new JobAggregator(linker, partyLinker, jobPanel, jobsHashMap);
+            }
+
             populateCave();
             DefaultTreeModel model = (DefaultTreeModel) treeDisplay.getModel();
             model.reload();

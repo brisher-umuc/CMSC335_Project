@@ -18,6 +18,7 @@ public class Creature extends CaveElement {
     private double age = 0;
     private ArrayList<Treasure> treasures = new ArrayList<Treasure>();
     private ArrayList<Artifact> artifacts = new ArrayList<Artifact>();
+    private ArrayList<String> jobsListing = new ArrayList<>();
 
     public boolean busyFlag = false;
     public Creature(String _name) {
@@ -93,6 +94,22 @@ public class Creature extends CaveElement {
     }
     public void setCapacity(int capacity) {
         this.capacity = capacity;
+    }
+
+    public ArrayList<String> getJobsListing() {
+        return jobsListing;
+    }
+
+    public void setJobsListing(ArrayList<String> jobsListing) {
+        this.jobsListing = jobsListing;
+    }
+
+    public boolean isBusyFlag() {
+        return busyFlag;
+    }
+
+    public void setBusyFlag(boolean busyFlag) {
+        this.busyFlag = busyFlag;
     }
 
     // helpers for easy reflection
