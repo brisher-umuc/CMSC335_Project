@@ -31,6 +31,7 @@ public class SorcerersCave extends JPanel {
     private static final String CREATURE = "c";
     private static final String ARTIFACT = "a";
     private static final String TREASURE = "t";
+    private static final String JOB = "j";
     private static final String NEWLINE = "\n";
     private static final String BREAK = "<br>";
 
@@ -154,7 +155,9 @@ public class SorcerersCave extends JPanel {
         comparatorBox.setFont(DEFAULT_FONT);
         comparatorBox.addActionListener(ae -> {
             if (comparatorBox.getItemCount() > 0) {
+                String s = getJTreeState();
                 populateCave();
+                setJTreeState(s);
             }
         });
 
@@ -275,7 +278,9 @@ public class SorcerersCave extends JPanel {
                 }
             }
         }
+        String s = getJTreeState();
         populateCave();
+        setJTreeState(s);
     }  // end sort
 
     /**
@@ -455,7 +460,7 @@ public class SorcerersCave extends JPanel {
     private void readInFile() {
         String line;
         HashMap<Integer, Party> partyLinker = new HashMap<>();
-        HashMap<Integer, CaveElement> linker = new HashMap<>();
+        HashMap<Integer, Creature> creatureLinker = new HashMap<>();
         Scanner sc;
         HashMap<String, ArrayList<String>> jobsHashMap = new HashMap<>();
 
@@ -468,7 +473,6 @@ public class SorcerersCave extends JPanel {
 
                     String typeDefinition = sc.next();  // find type of the line
                     int index = sc.nextInt();
-
 
                     switch (typeDefinition) {
                         case PARTY:  //p:<index>:<name>
@@ -512,7 +516,7 @@ public class SorcerersCave extends JPanel {
                                 p.getCreatures().add(creature);
                             }
 
-                            linker.put(creature.getIndex(), creature);
+                            creatureLinker.put(creature.getIndex(), creature);
 
                             break;
                         case ARTIFACT:  //a:<index>:<type>:<creature>[:<name>]
@@ -533,11 +537,9 @@ public class SorcerersCave extends JPanel {
                                 cave.getElements().add(artifact);
                             }
                             else {
-                                Creature c = (Creature) linker.get(artifact.getCreature());
+                                Creature c = creatureLinker.get(artifact.getCreature());
                                 c.getArtifacts().add(artifact);
                             }
-
-                            linker.put(artifact.getIndex(), artifact);
 
                             break;
                         case TREASURE:  //t:<index>:<type>:<creature>:<weight>:<value>
@@ -552,29 +554,23 @@ public class SorcerersCave extends JPanel {
                                 cave.getElements().add(treasure);
                             }
                             else {
-                                Creature cr = (Creature) linker.get(treasure.getCreature());
+                                Creature cr = creatureLinker.get(treasure.getCreature());
                                 cr.getTreasures().add(treasure);
                             }
 
-                            linker.put(treasure.getIndex(), treasure);
-
                             break;
-                        case "j":  // TODO: fix this
-                            //Job j = new Job(linker, partyLinker, jobPanel, new Scanner(line).useDelimiter("\\s*:\\s*"));
+                        case JOB:
                             sc.next();  // dump the job name
-                            Creature worker = (Creature) linker.get(sc.nextInt());
+                            Creature worker = creatureLinker.get(sc.nextInt());
 
                             if (jobsHashMap.get(worker.getName()) != null) {
                                 jobsHashMap.get(worker.getName()).add(line);
                             }
                             else {
-                                ArrayList<String> localList = new ArrayList<String>();
+                                ArrayList<String> localList = new ArrayList<>();
                                 localList.add(line);
                                 jobsHashMap.put(worker.getName(), localList);
                             }
-
-
-
 
                             break;
                         default:
@@ -585,7 +581,7 @@ public class SorcerersCave extends JPanel {
             bufferedReader.close();
 
             if (jobsHashMap.size() > 0) {
-                new JobAggregator(linker, partyLinker, jobPanel, jobsHashMap);
+                new JobAggregator(creatureLinker, partyLinker, jobPanel, jobsHashMap);
             }
 
             populateCave();
@@ -596,6 +592,31 @@ public class SorcerersCave extends JPanel {
             e.printStackTrace();
         }
     }  // end readInFile
+
+    /**
+     * helper to establish jtree state after certain actions
+     */
+    private String getJTreeState() {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < treeDisplay.getRowCount(); ++i) {
+            if (treeDisplay.isExpanded(i)) {
+                sb.append(i).append(",");
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * helper to reestablish jtree state after certain actions
+     */
+    private void setJTreeState(String s) {
+        String[] indices = s.split(",");
+        for (String st: indices) {
+            int row = Integer.parseInt(st);
+            treeDisplay.expandRow(row);
+        }
+    }
 
     /**
      * recursive search by name, index, or type

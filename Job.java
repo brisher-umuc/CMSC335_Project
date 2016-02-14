@@ -1,6 +1,4 @@
 import javax.swing.*;
-import javax.swing.border.LineBorder;
-import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.util.HashMap;
 import java.util.Random;
@@ -25,12 +23,12 @@ class Job extends CaveElement implements Runnable {
     JButton jbKill = new JButton ("Cancel");
     Status status = Status.SUSPENDED;
 
-    HashMap<Integer, CaveElement> linker;
+    HashMap<Integer, Creature> linker;
     HashMap<Integer, Party> partyLinker;
 
     enum Status {RUNNING, SUSPENDED, WAITING, DONE};
 
-    public Job (HashMap<Integer, CaveElement> hc, HashMap<Integer, Party> hp, JPanel cv, Scanner sc) {
+    public Job (HashMap<Integer, Creature> hc, HashMap<Integer, Party> hp, JPanel cv, Scanner sc) {
 
         parent = cv;
         linker = hc;
@@ -39,7 +37,7 @@ class Job extends CaveElement implements Runnable {
         jobIndex = sc.nextInt();
         jobName = sc.next();
         int target = sc.nextInt();
-        worker = (Creature) linker.get(target);
+        worker = linker.get(target);
         jobTime = (int)(sc.nextDouble());
         progressBar = new JProgressBar();
         progressBar.setStringPainted(true);
