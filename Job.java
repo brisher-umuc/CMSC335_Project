@@ -138,7 +138,13 @@ class Job extends CaveElement implements Runnable {
             } // end if stepping
         } // end runninig
 
-        progressBar.setValue (100);
+        if (!noKillFlag) {
+            progressBar.setValue(0);
+        }
+        else {
+            progressBar.setValue (100);
+        }
+
         showStatus (Status.DONE);
         synchronized (this.partyLinker.get(worker.getParty())) {
             worker.busyFlag = false;

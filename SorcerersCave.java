@@ -23,8 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
-//TODO: change tostring to spew all info about each thing
-
 public class SorcerersCave extends JPanel {
     private static final Font DEFAULT_FONT = new Font("Monospaced", Font.BOLD, 16);
     private static final String PARTY = "p";
@@ -34,6 +32,8 @@ public class SorcerersCave extends JPanel {
     private static final String JOB = "j";
     private static final String NEWLINE = "\n";
     private static final String BREAK = "<br>";
+
+    private static final long serialVersionUID = 4444L;
 
     private final JFileChooser fileChooser;
     private final JButton openButton;
@@ -196,6 +196,9 @@ public class SorcerersCave extends JPanel {
                     // if the cave has been populated before, use a new cave
                     // essentially, every opening of a file constitutes a new game
                     cave = new Cave();
+                    jobPanel.removeAll();  // have to update the jobpanel
+                    jobPanel.repaint();
+                    jobPanel.revalidate();
                 } readInFile(); }});
         openButton.setFont(DEFAULT_FONT);
 
@@ -278,9 +281,7 @@ public class SorcerersCave extends JPanel {
                 }
             }
         }
-        String s = getJTreeState();
         populateCave();
-        setJTreeState(s);
     }  // end sort
 
     /**
@@ -383,7 +384,6 @@ public class SorcerersCave extends JPanel {
      *      3:  presses <Search>
      */
     private void populateCave() {
-        //TODO: documentation, keep "the cave" and "the orphans" when updating, add in the orphans iterator, find and remove "stuff again"
         ToolTipTreeNode root = (ToolTipTreeNode) treeDisplay.getModel().getRoot();
         root.removeAllChildren();
         caveNode = new ToolTipTreeNode("The Cave");
@@ -433,6 +433,8 @@ public class SorcerersCave extends JPanel {
         for (CaveElement ce: cave.getElements()) {  // orphans
             if (ce instanceof Treasure) {
                 tooltip = buildTooltip((Treasure) ce);
+                ToolTipTreeNode localTreasure = new ToolTipTreeNode(ce.getName() + buildAdditionalInfo((Treasure) ce), tooltip);
+                orphanNode.add(localTreasure);
             }
             else if (ce instanceof Creature) {
                 Creature c = (Creature) ce;
@@ -445,12 +447,12 @@ public class SorcerersCave extends JPanel {
                 }
                 for (Treasure t: c.getTreasures()) {
                     tooltip = buildTooltip(t);
-                    ToolTipTreeNode localTreasure = new ToolTipTreeNode(t.getName() + buildAdditionalInfo((Treasure) ce), tooltip);
+                    ToolTipTreeNode localTreasure = new ToolTipTreeNode(t.getName() + buildAdditionalInfo(t), tooltip);
                     localCreature.add(localTreasure);
                 }
 
+                orphanNode.add(localCreature);
             }
-            orphanNode.add(new ToolTipTreeNode(ce.getName(), tooltip));
         }
     }
 
@@ -508,7 +510,7 @@ public class SorcerersCave extends JPanel {
                                 creature.setWeight(weight);
                             }
 
-                            if (creature.getParty() == 0) {
+                            if (partyLinker.get(creature.getParty()) == null) {
                                 cave.getElements().add(creature);
                             }
                             else {
@@ -533,7 +535,7 @@ public class SorcerersCave extends JPanel {
                             }
 
                             // orphan artifacts
-                            if (artifact.getCreature() == 0) {
+                            if (creatureLinker.get(artifact.getCreature()) == null) {
                                 cave.getElements().add(artifact);
                             }
                             else {
@@ -550,7 +552,7 @@ public class SorcerersCave extends JPanel {
 
                             Treasure treasure = new Treasure(type, index, creatureIndex, weight, value);
 
-                            if (treasure.getCreature() == 0) {
+                            if (creatureLinker.get(treasure.getCreature()) == null) {
                                 cave.getElements().add(treasure);
                             }
                             else {
