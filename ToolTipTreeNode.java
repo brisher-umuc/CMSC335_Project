@@ -10,6 +10,7 @@ import javax.swing.tree.DefaultMutableTreeNode;
  */
 class ToolTipTreeNode extends DefaultMutableTreeNode {
     private String toolTipText = "";
+    public static final long serialVersionUID = 446273; // ND:
 
     public ToolTipTreeNode(String str, String toolTipText) {
         super(str);

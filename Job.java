@@ -11,7 +11,6 @@ import java.util.Scanner;
  * Purpose:
  */
 class Job extends CaveElement implements Runnable {
-    static Random randomNumber = new Random();
     JPanel parent;
     Creature worker = null;
     int jobIndex;
@@ -29,7 +28,6 @@ class Job extends CaveElement implements Runnable {
     enum Status {RUNNING, SUSPENDED, WAITING, DONE};
 
     public Job (HashMap<Integer, Creature> hc, HashMap<Integer, Party> hp, JPanel cv, Scanner sc) {
-
         parent = cv;
         linker = hc;
         partyLinker = hp;
@@ -39,6 +37,10 @@ class Job extends CaveElement implements Runnable {
         int target = sc.nextInt();
         worker = linker.get(target);
         jobTime = (int)(sc.nextDouble());
+        while (sc.hasNext()) {  // resource requirements, probably set them as some kind of attribute
+            System.out.println("art type " + sc.next());
+            System.out.println("req # " + sc.next());
+        }
         progressBar = new JProgressBar();
         progressBar.setStringPainted(true);
 
@@ -49,8 +51,8 @@ class Job extends CaveElement implements Runnable {
 
         JPanel totalPanel = new JPanel(new BorderLayout());
 
-        topJobPanel.add(progressBar, BorderLayout.PAGE_END);
         topJobPanel.add(new JLabel(jobName, SwingConstants.CENTER), BorderLayout.LINE_END);
+        topJobPanel.add(progressBar, BorderLayout.PAGE_END);
 
         bottomJobPanel.add(jbGo, BorderLayout.LINE_START);
         bottomJobPanel.add(jbKill, BorderLayout.LINE_END);
@@ -62,19 +64,16 @@ class Job extends CaveElement implements Runnable {
         parent.add(totalPanel);
         parent.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        (new Thread(this, worker.getName() + " " + jobName)).start();
+        //TODO: comment out .start() line
+        //make an executor in main thread
+        //call .submit() for each Job, see what happens
 
+        (new Thread(this, worker.getName() + " " + jobName)).start();
 
         jbGo.addActionListener(e -> toggleGoFlag());
         jbKill.addActionListener(e -> setKillFlag ());
 
     } // end constructor
-
-//     JLabel jln = new JLabel (worker.name);
-    // following is text alignment relative to icon
-//     jln.setHorizontalTextPosition (SwingConstants.CENTER);
-//     jln.setHorizontalAlignment (SwingConstants.CENTER);
-//     parent.jrun.add (jln);
 
     public void toggleGoFlag () {
         goFlag = !goFlag; // ND; should be synced, and notify waiting sync in running loop
@@ -117,7 +116,7 @@ class Job extends CaveElement implements Runnable {
             while (worker.busyFlag) {
                 showStatus (Status.WAITING);
                 try {
-                    this.partyLinker.get(worker.getParty()).wait();
+                    this.partyLinker.get(worker.getParty()).wait();  // if the Creature is busy already, chill out and wait til you're called with a notify
                 }
                 catch (InterruptedException e) {
                 } // end try/catch block
@@ -129,12 +128,12 @@ class Job extends CaveElement implements Runnable {
             try {
                 Thread.sleep (100);
             } catch (InterruptedException e) {}
-            if (goFlag) {
-                showStatus (Status.RUNNING);
-                time += 100;
-                progressBar.setValue((int) (((time - startTime) / duration) * 100));
-            } else {
-                showStatus (Status.SUSPENDED); // should wait here, not busy looop
+                if (goFlag) {
+                    showStatus (Status.RUNNING);
+                    time += 100;
+                    progressBar.setValue((int) (((time - startTime) / duration) * 100));
+                } else {
+                    showStatus (Status.SUSPENDED); // should wait here, not busy looop
             } // end if stepping
         } // end runninig
 

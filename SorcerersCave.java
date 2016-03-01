@@ -66,14 +66,19 @@ public class SorcerersCave extends JPanel {
         JPanel bottomPanel = new JPanel(new GridLayout(3, 0));
         topPanel.setBorder(new EmptyBorder(5,5,5,5));
         bottomPanel.setBorder(new EmptyBorder(5,5,5,5));
+        JPanel allPanel = new JPanel();
+        allPanel.setLayout(new BoxLayout(allPanel, BoxLayout.PAGE_AXIS));
 
         JButton searchButton, displayButton, sortButton;
 
         // attributes list to populate the sort comparator dropdown
         attributesList.put("Creatures", new ArrayList<String>() {
+            public static final long serialVersionUID = 98734; // ND: anonymous inner class!
             {add("Name"); add("Age"); add("Height"); add("Weight");
             add("Empathy"); add("Fear"); add("Carrying Capacity");}} );
-        attributesList.put("Treasures", new ArrayList<String>() {{add("Weight"); add("Value");}});
+        attributesList.put("Treasures", new ArrayList<String>() {
+            public static final long serialVersionUID = 98754; // ND: anonymous inner class!
+            {add("Weight"); add("Value");}});
 
         fileChooser = new JFileChooser();
         fileChooser.setCurrentDirectory(new File("."));
@@ -83,6 +88,8 @@ public class SorcerersCave extends JPanel {
         caveNode = new ToolTipTreeNode("The Cave");
         orphanNode = new ToolTipTreeNode("The Orphans");
         treeDisplay = new JTree(pseudoRootNode) {
+            public static final long serialVersionUID = 98432; // ND: anonymous inner class!
+
             public String getToolTipText(MouseEvent evt) {
                 if (getRowForLocation(evt.getX(), evt.getY()) == -1) {
                     return null;
@@ -230,7 +237,6 @@ public class SorcerersCave extends JPanel {
         JSplitPane splitPaneVertical = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
         splitPaneVertical.setRightComponent(treePanel);
         splitPaneVertical.setLeftComponent(jobScrollPane);
-        //splitPaneVertical.setDividerLocation(1.0);
 
         topPanel.add(splitPaneVertical, BorderLayout.CENTER);
 
@@ -249,11 +255,10 @@ public class SorcerersCave extends JPanel {
         bottomPanel.add(searchPanel);
         bottomPanel.add(controlPanel);
 
-        JSplitPane splitPaneHorizontal = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-        splitPaneHorizontal.setTopComponent(topPanel);
-        splitPaneHorizontal.setBottomComponent(bottomPanel);
+        allPanel.add(topPanel);
+        allPanel.add(bottomPanel);
 
-        this.add(splitPaneHorizontal, BorderLayout.CENTER);
+        this.add(allPanel, BorderLayout.CENTER);
     }  // end constructor
 
     private void sort(String typeSelected, String comparatorSelected, Object obj) {
