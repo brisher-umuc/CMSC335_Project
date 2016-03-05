@@ -20,7 +20,7 @@ public class Creature extends CaveElement {
     private ArrayList<Artifact> artifacts = new ArrayList<Artifact>();
     private ArrayList<String> jobsListing = new ArrayList<>();
 
-    public boolean busyFlag = false;
+    public boolean busyFlag = false, holdsResources = false;
     public Creature(String _name) {
         this.name = _name;
     }

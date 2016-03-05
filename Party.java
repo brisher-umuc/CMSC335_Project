@@ -8,14 +8,23 @@
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Map;
 
 
 public class Party extends CaveElement {
     //    p:<index>:<name>
     private ArrayList <Creature> creatures = new ArrayList<Creature>();
+    private ResourcePool pool = new ResourcePool();
 
     public Party(String _name) {
         this.name = _name;
+    }
+
+    public ResourcePool getPool() {
+        return pool;
+    }
+    public void setPool(ResourcePool pool) {
+        this.pool = pool;
     }
 
     public ArrayList<Creature> getCreatures() {

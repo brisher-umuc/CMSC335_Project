@@ -1,8 +1,9 @@
 import javax.swing.*;
 import java.awt.*;
 import java.util.HashMap;
-import java.util.Random;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.locks.Lock;
 
 /**
  * File: Job
@@ -12,8 +13,9 @@ import java.util.Scanner;
  */
 class Job extends CaveElement implements Runnable {
     JPanel parent;
-    Creature worker = null;
-    int jobIndex;
+    Creature creature = null;
+    private final Party party;
+    int jobIndex, target;
     long jobTime;
     String jobName = "";
     JProgressBar progressBar = new JProgressBar ();
@@ -21,26 +23,47 @@ class Job extends CaveElement implements Runnable {
     JButton jbGo   = new JButton ("Stop");
     JButton jbKill = new JButton ("Cancel");
     Status status = Status.SUSPENDED;
+    JTextArea poolText;
+    JLabel jobResourceText = new JLabel();
 
     HashMap<Integer, Creature> linker;
     HashMap<Integer, Party> partyLinker;
+    HashMap<String, Integer> requirements = new HashMap<>();
+    HashMap<String, HashMap<String, Integer>> maxResources;
 
-    enum Status {RUNNING, SUSPENDED, WAITING, DONE};
+    enum Status {RUNNING, SUSPENDED, WAITING, STARTED, FINISHED, CANTPROCEED};
 
-    public Job (HashMap<Integer, Creature> hc, HashMap<Integer, Party> hp, JPanel cv, Scanner sc) {
+    public Job (HashMap<Integer, Creature> hc, HashMap<Integer, Party> hp, JPanel cv, Scanner sc, HashMap<String, HashMap<String, Integer>> maximums, JTextArea pT) {
+        sc.next (); // dump first field, j
+
         parent = cv;
         linker = hc;
         partyLinker = hp;
-        sc.next (); // dump first field, j
+        maxResources = maximums;
+        poolText = pT;
+
         jobIndex = sc.nextInt();
         jobName = sc.next();
-        int target = sc.nextInt();
-        worker = linker.get(target);
+        target = sc.nextInt();
         jobTime = (int)(sc.nextDouble());
+
+        creature = linker.get(target);
+        party = this.partyLinker.get(creature.getParty());
+
         while (sc.hasNext()) {  // resource requirements, probably set them as some kind of attribute
-            System.out.println("art type " + sc.next());
-            System.out.println("req # " + sc.next());
+            String type = sc.next();
+            if (type.endsWith("s")) {
+                type = type.substring(0, type.length() - 1);
+            }
+            int amount = sc.nextInt();
+
+            if (amount == 0) {  // if requirement for a type is 0, don't care about tracking it
+                continue;
+            }
+
+            requirements.put(type, amount);
         }
+
         progressBar = new JProgressBar();
         progressBar.setStringPainted(true);
 
@@ -51,6 +74,7 @@ class Job extends CaveElement implements Runnable {
 
         JPanel totalPanel = new JPanel(new BorderLayout());
 
+        topJobPanel.add(jobResourceText, BorderLayout.LINE_START);
         topJobPanel.add(new JLabel(jobName, SwingConstants.CENTER), BorderLayout.LINE_END);
         topJobPanel.add(progressBar, BorderLayout.PAGE_END);
 
@@ -64,11 +88,9 @@ class Job extends CaveElement implements Runnable {
         parent.add(totalPanel);
         parent.add(Box.createRigidArea(new Dimension(0, 10)));
 
-        //TODO: comment out .start() line
-        //make an executor in main thread
-        //call .submit() for each Job, see what happens
+        //System.out.println("Requirements: " + requirements.entrySet().toString());
 
-        (new Thread(this, worker.getName() + " " + jobName)).start();
+        (new Thread(this, creature.getName() + " " + jobName)).start();
 
         jbGo.addActionListener(e -> toggleGoFlag());
         jbKill.addActionListener(e -> setKillFlag ());
@@ -99,9 +121,17 @@ class Job extends CaveElement implements Runnable {
                 jbGo.setBackground (Color.orange);
                 jbGo.setText ("Waiting turn");
                 break;
-            case DONE:
+            case CANTPROCEED:
                 jbGo.setBackground (Color.red);
-                jbGo.setText ("Done");
+                jbGo.setText ("Cannot Proceed");
+                break;
+            case STARTED:
+                jbGo.setBackground(Color.CYAN);
+                jbGo.setText("Started");
+                break;
+            case FINISHED:
+                jbGo.setBackground(Color.MAGENTA);
+                jbGo.setText("Done");
                 break;
         } // end switch on status
     } // end showStatus
@@ -112,24 +142,99 @@ class Job extends CaveElement implements Runnable {
         long stopTime = time + 1000 * jobTime;
         double duration = stopTime - time;
 
-        synchronized (this.partyLinker.get(worker.getParty())) {
-            while (worker.busyFlag) {
+        synchronized (party.getPool()) {  // lock the pool
+            while (true) {
+                System.out.println(Thread.currentThread().toString() + " entered pool while");
+                boolean sentry = true;
+                boolean killSwitch = false;
+
+                for (Map.Entry<String, Integer> entry : requirements.entrySet()) {
+                    Resource res = party.getPool().getResource(entry.getKey());
+                    if (res == null) {
+                        // unmet requirement, i.e. the pool never even got an object of this type, so it has 0, and there's a requirement for it
+                        killSwitch = true;
+                    }
+                    if (res != null && entry.getValue() > res.getCount()) {  // requirement higher than available resource
+                        sentry = false;
+                    }
+
+                    if (res != null && entry.getValue() > maxResources.get(party.getName()).get(entry.getKey())) {
+                        killSwitch = true;  // the requirement is higher than the maximum possible amount of that resource
+                    }
+                }
+
+                if (killSwitch) {
+                    jobResourceText.setText("Req's can't be met");
+                    showStatus(Status.CANTPROCEED);
+                    return;
+                } else if (sentry && ! creature.holdsResources) {  // sentry never got flagged false, can safely get all things
+                    //if (creature.)
+                    String rsb = "Holding -> ";
+
+                    for (Map.Entry<String, Integer> entry : requirements.entrySet()) {
+                        Resource res = party.getPool().getResource(entry.getKey());
+
+
+                        if (res != null) {
+                            res.decrementCount(entry.getValue());
+                            rsb += String.valueOf(res.getName().charAt(0)) + ": " + entry.getValue() + " ";
+                        }
+                    }
+                    jobResourceText.setText(rsb);
+                    creature.holdsResources = true;
+
+                    StringBuilder sb = new StringBuilder();
+
+                    for (Party p: partyLinker.values()) {
+                        try {
+                            ResourcePool rp = p.getPool();
+                            if (rp != null) {
+                                sb.append(rp.toString());
+                            }
+                        }
+                        catch (NullPointerException e) {
+                            continue;
+                        }
+                    }
+
+                    poolText.setText(sb.toString());
+                    break;
+                } else {
+                    try {
+                        String rsb = "Waiting -> ";
+                        for (Map.Entry<String, Integer> entry : requirements.entrySet()) {
+                            Resource res = party.getPool().getResource(entry.getKey());
+                            if (res != null) {
+                                rsb += String.valueOf(res.getName().charAt(0)) + ": " + entry.getValue() + " ";
+                            }
+                        }
+                        jobResourceText.setText(rsb);
+                        party.getPool().wait();
+                    } catch (InterruptedException e) {
+                    }
+                }
+            }
+        }  // end pool sync
+
+        synchronized (creature) {
+            while (creature.busyFlag) {
                 showStatus (Status.WAITING);
                 try {
-                    this.partyLinker.get(worker.getParty()).wait();  // if the Creature is busy already, chill out and wait til you're called with a notify
+                    creature.wait();  // if the Creature is busy already, chill out and wait til you're called with a notify
                 }
                 catch (InterruptedException e) {
                 } // end try/catch block
-            } // end while waiting for worker to be free
-            worker.busyFlag = true;
-        } // end sychronized on worker
+            } // end while waiting for creature to be free
+            creature.busyFlag = true;
+        } // end sychronized on creature
+
 
         while (time < stopTime && noKillFlag) {
             try {
                 Thread.sleep (100);
             } catch (InterruptedException e) {}
                 if (goFlag) {
-                    showStatus (Status.RUNNING);
+                    showStatus (Status.STARTED);
                     time += 100;
                     progressBar.setValue((int) (((time - startTime) / duration) * 100));
                 } else {
@@ -144,16 +249,45 @@ class Job extends CaveElement implements Runnable {
             progressBar.setValue (100);
         }
 
-        showStatus (Status.DONE);
-        synchronized (this.partyLinker.get(worker.getParty())) {
-            worker.busyFlag = false;
-            this.partyLinker.get(worker.getParty()).notifyAll();
+        synchronized (party.getPool()) {
+            for (Map.Entry<String, Integer> entry : requirements.entrySet()) {
+                Resource res = party.getPool().getResource(entry.getKey());
+                if (res != null) {
+                    res.incrementCount(entry.getValue());
+                }
+                creature.holdsResources = false;
+                jobResourceText.setText("Released Resources");
+
+                StringBuilder sb = new StringBuilder();
+
+                for (Party p: partyLinker.values()) {
+                    try {
+                        sb.append(p.getPool().toString());
+                    }
+                    catch (NullPointerException e) {
+                        continue;
+                    }
+                }
+
+                poolText.setText(sb.toString());
+
+            }
+            party.getPool().notifyAll();  // all
+        }  // end pool sync
+
+
+        showStatus(Status.FINISHED);
+        synchronized (creature) {
+            creature.busyFlag = false;
+            showStatus(Status.FINISHED);
+            creature.notifyAll();
         }
+
 
     } // end method run - implements runnable
 
     public String toString () {
-        String sr = String.format ("j:%7d:%15s:%7d:%5d", jobIndex, jobName, worker.getIndex(), jobTime);
+        String sr = String.format ("j:%7d:%15s:%7d:%5d", jobIndex, jobName, creature.getIndex(), jobTime);
         return sr;
     } //end method toString
 

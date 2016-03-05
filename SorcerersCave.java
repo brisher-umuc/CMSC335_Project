@@ -21,6 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 public class SorcerersCave extends JPanel {
@@ -44,6 +45,7 @@ public class SorcerersCave extends JPanel {
     private final JComboBox<String> searchSelectorBox,comparatorBox, typeSelectorBox;
     private static Boolean sentinel = false;
     private JPanel jobPanel;
+    private JTextArea poolText;
 
     private final HashMap<String, ArrayList<String>> attributesList = new HashMap<>();
 
@@ -59,6 +61,7 @@ public class SorcerersCave extends JPanel {
         // for the sake of my sanity, defining all the panels here
         JPanel treePanel = new JPanel(new BorderLayout());
         jobPanel = new JPanel();
+        JPanel poolPanel = new JPanel(new BorderLayout(5, 0));
         JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
         JPanel sortPanel = new JPanel(new BorderLayout(5, 0));
         JPanel controlPanel = new JPanel(new BorderLayout());
@@ -230,6 +233,8 @@ public class SorcerersCave extends JPanel {
             }});
         searchButton.setFont(DEFAULT_FONT);
 
+        poolText = new JTextArea(1, 1);
+
         // moved all the panel.adds down here, also for sanity
         treePanel.add(scrollPane, BorderLayout.CENTER);
 
@@ -239,6 +244,9 @@ public class SorcerersCave extends JPanel {
         splitPaneVertical.setLeftComponent(jobScrollPane);
 
         topPanel.add(splitPaneVertical, BorderLayout.CENTER);
+
+        poolPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Resource Pools"));
+        poolPanel.add(poolText);
 
         searchPanel.add(searchSelectorBox, BorderLayout.LINE_START);
         searchPanel.add(searchField, BorderLayout.CENTER);
@@ -255,10 +263,14 @@ public class SorcerersCave extends JPanel {
         bottomPanel.add(searchPanel);
         bottomPanel.add(controlPanel);
 
+        allPanel.add(poolPanel);
+
         allPanel.add(topPanel);
         allPanel.add(bottomPanel);
 
         this.add(allPanel, BorderLayout.CENTER);
+        this.setPreferredSize(new Dimension(900, 900));
+
     }  // end constructor
 
     private void sort(String typeSelected, String comparatorSelected, Object obj) {
@@ -546,6 +558,22 @@ public class SorcerersCave extends JPanel {
                             else {
                                 Creature c = creatureLinker.get(artifact.getCreature());
                                 c.getArtifacts().add(artifact);
+
+                                Party p = partyLinker.get(c.getParty());
+                                ResourcePool pool = p.getPool();
+
+                                pool.setParty(p);
+
+                                //
+                                if (pool.getResource(artifact.getType()) != null) {
+                                    pool.getResource(artifact.getType()).incrementCount();
+                                }
+                                else {
+                                    Resource r = new Resource(artifact.getType());
+                                    r.incrementCount();
+
+                                    pool.setResource(artifact.getType(), r);
+                                }
                             }
 
                             break;
@@ -588,7 +616,17 @@ public class SorcerersCave extends JPanel {
             bufferedReader.close();
 
             if (jobsHashMap.size() > 0) {
-                new JobAggregator(creatureLinker, partyLinker, jobPanel, jobsHashMap);
+                HashMap<String, HashMap<String, Integer>> maxResources = new HashMap<>();
+
+                for (Party p: cave.getParties()) {
+                    HashMap<String, Integer> localMap = new HashMap<>();
+
+                    for (Map.Entry<String, Resource> entry: p.getPool().getProperties().entrySet()) {
+                        localMap.put(entry.getKey(), entry.getValue().getCount());
+                    }
+                    maxResources.put(p.getName(), localMap);
+                }
+                new JobAggregator(creatureLinker, partyLinker, jobPanel, jobsHashMap, maxResources, poolText);
             }
 
             populateCave();
