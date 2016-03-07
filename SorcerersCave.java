@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class SorcerersCave extends JPanel {
     private static final Font DEFAULT_FONT = new Font("Monospaced", Font.BOLD, 16);
@@ -33,7 +35,7 @@ public class SorcerersCave extends JPanel {
     private static final String JOB = "j";
     private static final String NEWLINE = "\n";
     private static final String BREAK = "<br>";
-
+    public static final int BUTTON_WIDTH = 150;
     private static final long serialVersionUID = 4444L;
 
     private final JFileChooser fileChooser;
@@ -44,8 +46,9 @@ public class SorcerersCave extends JPanel {
     private static JTextField searchField;
     private final JComboBox<String> searchSelectorBox,comparatorBox, typeSelectorBox;
     private static Boolean sentinel = false;
-    private JPanel jobPanel;
-    private JTextArea poolText;
+    private JPanel jobPanel, topPanel;
+    private JTextArea poolDisplay;
+    private JScrollPane jobScrollPane;
 
     private final HashMap<String, ArrayList<String>> attributesList = new HashMap<>();
 
@@ -56,36 +59,39 @@ public class SorcerersCave extends JPanel {
      * Constructor for Sorcerer's Cave
      */
     public SorcerersCave() {  // constructor
-        setLayout(new BorderLayout());
+        setLayout(new GridBagLayout());
+        GridBagConstraints gbc;
+        //setPreferredSize(new Dimension(1100, 900));
+        JPanel bottomPanel;
 
-        // for the sake of my sanity, defining all the panels here
-        JPanel treePanel = new JPanel(new BorderLayout());
-        jobPanel = new JPanel();
-        JPanel poolPanel = new JPanel(new BorderLayout(5, 0));
-        JPanel searchPanel = new JPanel(new BorderLayout(5, 0));
-        JPanel sortPanel = new JPanel(new BorderLayout(5, 0));
-        JPanel controlPanel = new JPanel(new BorderLayout());
-        JPanel topPanel = new JPanel(new BorderLayout());
-        JPanel bottomPanel = new JPanel(new GridLayout(3, 0));
+        topPanel = new JPanel(new GridBagLayout());
+        bottomPanel = new JPanel(new GridBagLayout());
         topPanel.setBorder(new EmptyBorder(5,5,5,5));
         bottomPanel.setBorder(new EmptyBorder(5,5,5,5));
-        JPanel allPanel = new JPanel();
-        allPanel.setLayout(new BoxLayout(allPanel, BoxLayout.PAGE_AXIS));
 
         JButton searchButton, displayButton, sortButton;
 
         // attributes list to populate the sort comparator dropdown
-        attributesList.put("Creatures", new ArrayList<String>() {
-            public static final long serialVersionUID = 98734; // ND: anonymous inner class!
-            {add("Name"); add("Age"); add("Height"); add("Weight");
-            add("Empathy"); add("Fear"); add("Carrying Capacity");}} );
-        attributesList.put("Treasures", new ArrayList<String>() {
-            public static final long serialVersionUID = 98754; // ND: anonymous inner class!
-            {add("Weight"); add("Value");}});
+        ArrayList<String> creatureList = new ArrayList<>();
+        creatureList.add("Name");
+        creatureList.add("Age");
+        creatureList.add("Height");
+        creatureList.add("Weight");
+        creatureList.add("Empathy");
+        creatureList.add("Fear");
+        creatureList.add("Carrying Capacity");
+        attributesList.put("Creatures", creatureList);
+
+        ArrayList<String> treasureList = new ArrayList<>();
+        treasureList.add("Weight");
+        treasureList.add("Value");
+
+        attributesList.put("Treasures", treasureList);
 
         fileChooser = new JFileChooser();
         fileChooser.setCurrentDirectory(new File("."));
 
+        // top panel ===================================================================================================
         // JTree display area
         ToolTipTreeNode pseudoRootNode = new ToolTipTreeNode("I'm hidden");  // workaround for having multi-rooted jtree
         caveNode = new ToolTipTreeNode("The Cave");
@@ -110,25 +116,70 @@ public class SorcerersCave extends JPanel {
         treeDisplay.setShowsRootHandles(true);
         ToolTipManager.sharedInstance().registerComponent(treeDisplay);
         treeDisplay.setFont(DEFAULT_FONT);
-        JScrollPane scrollPane = new JScrollPane(treeDisplay);
+        JScrollPane treeScrollPane = new JScrollPane(treeDisplay);
+        treeScrollPane.setPreferredSize(new Dimension(350, 500));
+        gbc = new GridBagConstraints();
+        gbc.gridx = 5;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.gridwidth = 2;
+        topPanel.add(treeScrollPane, gbc);
+
 
         // job panel, houses ... whatever im going to use to display jobs
+        jobPanel = new JPanel();
+        jobPanel.setLayout(new GridLayout(0, 1));
         jobPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Current Jobs"));
-        JScrollPane jobScrollPane = new JScrollPane(jobPanel);
+        jobScrollPane = new JScrollPane(jobPanel);
 
-        jobScrollPane.setMinimumSize(new Dimension(325, 525));
-        jobScrollPane.setPreferredSize(new Dimension(325, 525));
-        this.setMinimumSize(new Dimension(800, 500));
-        this.setPreferredSize(new Dimension(800, 700));
 
-        // search panel, houses searchField and searchSelectorBox
-        searchPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Search"));
+        jobScrollPane.setPreferredSize(new Dimension(700, 500));
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 1;
+        gbc.weighty = 1;
+        gbc.gridwidth = 4;
+        topPanel.add(jobScrollPane, gbc);
 
+        // add toppanel
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 6;
+        gbc.weighty = 1;
+        gbc.weightx = 1;
+        gbc.fill = GridBagConstraints.BOTH;
+        this.add(topPanel, gbc);
+        // end top panel ===============================================================================================
+
+        // bottom panel ===============================================================================================
+        poolDisplay = new JTextArea();
+        poolDisplay.setRows(7);
+        poolDisplay.setEditable(false);
+        gbc.gridy = 0;
+        gbc.gridx = 0;
+        gbc.gridwidth = 7;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 1;
+        gbc.weightx = 1;
+        poolDisplay.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Resource Pools"));
+        bottomPanel.add(poolDisplay, gbc);
+
+        // search panel, houses searchField, searchButton and searchSelectorBox
         searchSelectorBox = new JComboBox<>();
+        searchSelectorBox.setPreferredSize(new Dimension(BUTTON_WIDTH, 26));
         searchSelectorBox.addItem("Index");
         searchSelectorBox.addItem("Type");
         searchSelectorBox.addItem("Name");
         searchSelectorBox.setFont(DEFAULT_FONT);
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.insets = new Insets(0,5,5,5);
+        bottomPanel.add(searchSelectorBox, gbc);
 
         searchField = new JTextField("Search Target");
         searchField.setFont(DEFAULT_FONT);
@@ -155,10 +206,31 @@ public class SorcerersCave extends JPanel {
                 searchField.setForeground(Color.black);
             }
         });
+        gbc = new GridBagConstraints();
+        gbc.gridy = 2;
+        gbc.gridx = 1;
+        gbc.gridwidth = 4;
+        gbc.weightx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        bottomPanel.add(searchField, gbc);
+
+        searchButton = new JButton("Search");
+        searchButton.setPreferredSize(new Dimension(BUTTON_WIDTH, 26));
+        searchButton.addActionListener(ae -> {
+            if (!sentinel) {  // user never entered search criteria
+                JOptionPane.showMessageDialog(null, "You can't search for anything with the default value." + NEWLINE);
+            }
+            else {
+                search(searchSelectorBox.getSelectedItem().toString(), searchField.getText());
+            }});
+        searchButton.setFont(DEFAULT_FONT);
+        gbc = new GridBagConstraints();
+        gbc.insets = new Insets(0, 5, 0, 5);
+        gbc.gridy = 2;
+        gbc.gridx = 6;
+        bottomPanel.add(searchButton, gbc);
 
         // sort panel, houses sortButton, comparatorBox, typeSelectorBox
-        sortPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Sort"));
-
         comparatorBox = new JComboBox<>();
         comparatorBox.addItem("Weight");
         comparatorBox.addItem("Value");
@@ -170,26 +242,45 @@ public class SorcerersCave extends JPanel {
                 setJTreeState(s);
             }
         });
+        gbc = new GridBagConstraints();
+        gbc.gridy = 1;
+        gbc.gridx = 1;
+        gbc.gridwidth = 4;
+        gbc.weightx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        bottomPanel.add(comparatorBox, gbc);
 
         typeSelectorBox = new JComboBox<>();
+        typeSelectorBox.setPreferredSize(new Dimension(BUTTON_WIDTH, 26));
         typeSelectorBox.addItem("Treasures");
         typeSelectorBox.addItem("Creatures");
         typeSelectorBox.addActionListener(ae -> {
             comparatorBox.removeAllItems();
-            attributesList.get(typeSelectorBox.getSelectedItem()).forEach((st)->comparatorBox.addItem(st));
+            attributesList.get(typeSelectorBox.getSelectedItem().toString()).forEach(comparatorBox::addItem);
         });
         typeSelectorBox.setFont(DEFAULT_FONT);
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.insets = new Insets(0, 5, 5, 5);
+        bottomPanel.add(typeSelectorBox, gbc);
 
         sortButton = new JButton("Sort");
+        sortButton.setPreferredSize(new Dimension(BUTTON_WIDTH, 26));
         sortButton.addActionListener(ae -> {
             sort(typeSelectorBox.getSelectedItem().toString(), comparatorBox.getSelectedItem().toString(), cave);
         });
         sortButton.setFont(DEFAULT_FONT);
+        gbc = new GridBagConstraints();
+        gbc.insets = new Insets(0, 5, 0, 5);
+        gbc.gridy = 1;
+        gbc.gridx = 6;
+        bottomPanel.add(sortButton, gbc);
 
         // control panel, houses openButton, displayButton, searchButton
-        controlPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Control"));
 
         openButton = new JButton("Open File");
+        openButton.setPreferredSize(new Dimension(BUTTON_WIDTH, 26));
         openButton.addActionListener(ae -> {
             if (fileChooser.showOpenDialog(openButton) == JFileChooser.APPROVE_OPTION) {
                 gameFile = fileChooser.getSelectedFile();
@@ -211,6 +302,19 @@ public class SorcerersCave extends JPanel {
                     jobPanel.revalidate();
                 } readInFile(); }});
         openButton.setFont(DEFAULT_FONT);
+        gbc = new GridBagConstraints();
+        gbc.insets = new Insets(0, 5, 5, 5);
+        gbc.gridy = 3;
+        gbc.gridx = 6;
+        bottomPanel.add(openButton, gbc);
+
+        gbc = new GridBagConstraints();
+        gbc.gridy = 3;
+        gbc.gridx = 1;
+        gbc.gridwidth = 4;
+        gbc.weightx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        bottomPanel.add(new JLabel(), gbc);
 
         displayButton = new JButton("Display");
         displayButton.addActionListener(ae -> {
@@ -222,54 +326,23 @@ public class SorcerersCave extends JPanel {
             JOptionPane.showMessageDialog(null, sp);
         });
         displayButton.setFont(DEFAULT_FONT);
+        displayButton.setPreferredSize(new Dimension(BUTTON_WIDTH, 26));
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.insets = new Insets(0,5,0,5);
+        bottomPanel.add(displayButton, gbc);
 
-        searchButton = new JButton("Search");
-        searchButton.addActionListener(ae -> {
-            if (!sentinel) {  // user never entered search criteria
-                JOptionPane.showMessageDialog(null, "You can't search for anything with the default value." + NEWLINE);
-            }
-            else {
-                search(searchSelectorBox.getSelectedItem().toString(), searchField.getText());
-            }});
-        searchButton.setFont(DEFAULT_FONT);
+        gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0.01;
+        gbc.weighty = 0.01;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.anchor = GridBagConstraints.PAGE_END;
+        this.add(bottomPanel, gbc);
 
-        poolText = new JTextArea(1, 1);
-
-        // moved all the panel.adds down here, also for sanity
-        treePanel.add(scrollPane, BorderLayout.CENTER);
-
-        // splitPane vertical separation of jobs and cave display
-        JSplitPane splitPaneVertical = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-        splitPaneVertical.setRightComponent(treePanel);
-        splitPaneVertical.setLeftComponent(jobScrollPane);
-
-        topPanel.add(splitPaneVertical, BorderLayout.CENTER);
-
-        poolPanel.setBorder(new TitledBorder(new LineBorder(Color.lightGray, 2), "Resource Pools"));
-        poolPanel.add(poolText);
-
-        searchPanel.add(searchSelectorBox, BorderLayout.LINE_START);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        searchPanel.add(searchButton, BorderLayout.LINE_END);
-
-        sortPanel.add(typeSelectorBox, BorderLayout.LINE_START);
-        sortPanel.add(comparatorBox, BorderLayout.CENTER);
-        sortPanel.add(sortButton, BorderLayout.LINE_END);
-
-        controlPanel.add(openButton, BorderLayout.LINE_END);
-        controlPanel.add(displayButton, BorderLayout.LINE_START);
-
-        bottomPanel.add(sortPanel);
-        bottomPanel.add(searchPanel);
-        bottomPanel.add(controlPanel);
-
-        allPanel.add(poolPanel);
-
-        allPanel.add(topPanel);
-        allPanel.add(bottomPanel);
-
-        this.add(allPanel, BorderLayout.CENTER);
-        this.setPreferredSize(new Dimension(900, 900));
+        // end bottom panel ============================================================================================
 
     }  // end constructor
 
@@ -626,7 +699,22 @@ public class SorcerersCave extends JPanel {
                     }
                     maxResources.put(p.getName(), localMap);
                 }
-                new JobAggregator(creatureLinker, partyLinker, jobPanel, jobsHashMap, maxResources, poolText);
+                StringBuilder sb = new StringBuilder();
+
+                for (Party p: cave.getParties()) {
+                    try {
+                        ResourcePool rp = p.getPool();
+                        if (rp != null) {
+                            sb.append(rp.toString());
+                        }
+                    }
+                    catch (NullPointerException e) {
+                    }
+                }
+
+                poolDisplay.setText(sb.toString());
+
+                new JobAggregator(creatureLinker, partyLinker, jobPanel, jobsHashMap, maxResources, poolDisplay);
             }
 
             populateCave();
@@ -658,8 +746,10 @@ public class SorcerersCave extends JPanel {
     private void setJTreeState(String s) {
         String[] indices = s.split(",");
         for (String st: indices) {
-            int row = Integer.parseInt(st);
-            treeDisplay.expandRow(row);
+            if (!st.isEmpty()) {
+                int row = Integer.parseInt(st);
+                treeDisplay.expandRow(row);
+            }
         }
     }
 
@@ -873,10 +963,15 @@ public class SorcerersCave extends JPanel {
     }
 
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Sorcerer's Cave");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.getContentPane().add(new SorcerersCave());
-        frame.pack();
-        frame.setVisible(true);
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                JFrame frame = new JFrame("Sorcerer's Cave");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                frame.getContentPane().add(new SorcerersCave());
+                frame.pack();
+                frame.setVisible(true);
+            }
+        });
     } // end main
 }
